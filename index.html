@@ -105,7 +105,7 @@ textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--focus-ring
 .box.mono{font-family:var(--mono);color:var(--green);white-space:pre-wrap;word-break:break-all;
   overflow-y:auto;resize:vertical;height:110px}
 .box.prev{overflow-y:auto;resize:vertical;height:120px}
-.box.prev:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(179,154,255,.45)}
+.box.prev:focus,.box.prev:focus-within{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(179,154,255,.45)}
 .box.small{font-family:var(--mono);font-size:.72rem;color:var(--dim);white-space:pre-wrap;
   overflow-y:auto;height:150px;resize:vertical}
 .acts{display:flex;gap:7px;flex-wrap:wrap}
@@ -148,8 +148,7 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
     <div class="pane">
       <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽（點一下後可用方向鍵導覽）</div>
       <div class="box prev" id="l2n-prev" tabindex="0" role="application"
-        aria-label="數學式預覽，方向鍵可導覽：下=放大進入、上=縮小出來、左右=上一個/下一個、Enter=唸目前位置、Esc=結束導覽"
-        onkeydown="onPreviewKeydown(event)"></div>
+        aria-label="數學式預覽，方向鍵可導覽：下=放大進入、上=縮小出來、左右=上一個/下一個、Enter=唸目前位置、Esc=結束導覽"></div>
     </div>
   </div>
   <div class="pane">
@@ -203,6 +202,15 @@ function speak(text) {
 let ready = false;
 init().then(() => { ready = true; setStatus('引擎就緒', 'ok'); convert(); })
   .catch(e => setStatus('✗ 引擎載入失敗：' + e, 'err'));
+
+// 用 capture 階段掛鍵盤監聽，不管實際焦點卡在 MathJax 渲染出來的哪個內部
+// 子元素上，最外層一定會先收到事件，不會被內部元素自己的按鍵處理攔截掉
+// （這是實測發現：inline onkeydown 掛在外層 div 上完全沒反應，原因很可能
+// 是 MathJax 的渲染結果自己接住了鍵盤焦點跟按鍵事件）。點擊時也主動把
+// 焦點強制轉移到外層 div 本身，讓 :focus-within 樣式跟導覽邏輯行為一致。
+const previewEl = document.getElementById('l2n-prev');
+previewEl.addEventListener('click', () => previewEl.focus());
+previewEl.addEventListener('keydown', (ev) => window.onPreviewKeydown(ev), true);
 
 function setStatus(msg, cls) {
   const el = document.getElementById('st');
