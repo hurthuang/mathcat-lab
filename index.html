@@ -123,6 +123,114 @@ textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--focus-ring
 .box.mono.font-ascii{font-family:'SimBraille',monospace;color:var(--text);font-size:1.3rem;letter-spacing:1px}
 select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);border-radius:5px;
   padding:5px 9px;font-size:.76rem;font-family:inherit}
+
+/* Math Editor Modal（照抄自 vi-tools nemeth_converter.html，來源標註見 README） */
+.me-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);
+  z-index:10000;display:none;align-items:center;justify-content:center;padding:10px}
+.me-modal.open{display:flex}
+.me-modal-inner{background:#ffffff;color:#222;width:96%;max-width:1400px;
+  max-height:96vh;border-radius:8px;
+  overflow:visible;
+  display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.me-header{background:#f4f5f7;border-bottom:1px solid #ddd;padding:10px 15px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.me-header-title{font-weight:800;color:var(--blue);font-size:1.05rem;flex:1}
+.me-apply-btn{background:#2b8a3e;color:#fff;border:none;padding:8px 18px;
+  border-radius:4px;cursor:pointer;font-weight:700;font-size:.85rem}
+.me-apply-btn:hover{background:#228838}
+.me-cancel-btn{background:#ddd;color:#333;border:none;padding:8px 18px;
+  border-radius:4px;cursor:pointer;font-size:.85rem}
+.me-cancel-btn:hover{background:#bbb}
+.me-body{flex:1;overflow-y:auto;padding:15px;color:#222}
+.me-body h1{font-size:1.25rem;margin:0 0 10px;color:#222}
+.me-body a[role="navigation"]{display:inline-block;margin:5px 8px 5px 0;font-weight:700;color:#555;font-size:.85rem}
+.me-body button{margin:2px;padding:5px 10px;background:#eef2f7;border:1px solid #bfc8d3;
+  color:#222;border-radius:4px;font-size:.85rem;cursor:pointer;position:relative}
+.me-body button:hover{background:#d8e2ee}
+.me-body select{margin:2px;padding:5px;background:#fff;border:1px solid #bfc8d3;
+  color:#222;border-radius:4px;font-size:.85rem}
+.me-body input[type=file]{color:#222}
+.me-body .container{display:flex;width:100%;flex-wrap:wrap;gap:8px}
+.me-body textarea,.me-body #preview{flex:1 1 45%;min-width:300px;height:280px;
+  margin:5px 0;border:1px solid #ccc;padding:10px;font-family:"Noto Sans Mono",monospace;
+  background:#fff;color:#222;overflow-y:auto}
+.me-body #preview{background:#fafafa}
+.me-body #mathmlOutput{width:100%;height:150px;white-space:pre-wrap;margin-top:10px;
+  font-family:"Noto Sans Mono",monospace;border:1px solid #ccc;padding:10px;background:#fff;color:#222}
+.me-open-btn{background:var(--purple);color:#fff;border:1px solid var(--purple);
+  padding:6px 13px;border-radius:5px;font-size:.78rem;font-weight:700;cursor:pointer}
+.me-open-btn:hover{background:#8b68e0}
+
+[data-text]{position:relative}
+[data-text]:hover::after,
+[data-text]:focus::after,
+[data-text]:focus-visible::after{
+  content:attr(data-text);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translateX(-50%);
+  background:#222;
+  color:#fff;
+  padding:5px 9px;
+  border-radius:4px;
+  font-size:.78rem;
+  font-weight:400;
+  line-height:1.35;
+  white-space:nowrap;
+  max-width:280px;
+  z-index:9999;
+  pointer-events:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+[data-text]:hover::before,
+[data-text]:focus::before,
+[data-text]:focus-visible::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 2px);
+  transform:translateX(-50%);
+  border:5px solid transparent;
+  border-top-color:#222;
+  z-index:9999;
+  pointer-events:none;
+}
+[data-text][data-tip-pos="below"]:hover::after,
+[data-text][data-tip-pos="below"]:focus::after,
+[data-text][data-tip-pos="below"]:focus-visible::after{
+  bottom:auto;
+  top:calc(100% + 8px);
+}
+[data-text][data-tip-pos="below"]:hover::before,
+[data-text][data-tip-pos="below"]:focus::before,
+[data-text][data-tip-pos="below"]:focus-visible::before{
+  bottom:auto;
+  top:calc(100% + 2px);
+  border-top-color:transparent;
+  border-bottom-color:#222;
+}
+[data-text=""]:hover::after,
+[data-text=""]:focus::after,
+[data-text=""]:focus-visible::after,
+[data-text=""]:hover::before,
+[data-text=""]:focus::before,
+[data-text=""]:focus-visible::before{
+  content:none;
+}
+@media (forced-colors: active){
+  [data-text]:hover::after,
+  [data-text]:focus::after,
+  [data-text]:focus-visible::after{
+    background:Canvas;color:CanvasText;border:1px solid CanvasText;
+  }
+  [data-text]:hover::before,
+  [data-text]:focus::before,
+  [data-text]:focus-visible::before{
+    border-top-color:CanvasText;
+  }
+}
 </style>
 </head>
 <body>
@@ -168,6 +276,7 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
     <button class="btn" onclick="toggleMathml()">切換 MathML</button>
     <button class="btn" id="speak-btn" onclick="speakWhole()">🔊 朗讀整個算式</button>
     <button class="btn" id="nav-toggle-btn" onclick="toggleNav()">🧭 導覽模式</button>
+    <button class="me-open-btn" onclick="openMathEditor()">📝 數學編輯器</button>
   </div>
   <div class="st" id="st"></div>
   <div class="pane" id="nav-pane" style="display:none">
@@ -187,6 +296,1103 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
     <div class="box small" id="mathml-out"></div>
   </div>
 </main>
+<!-- Math Editor Modal -->
+<div class="me-modal" id="me-modal" role="dialog" aria-modal="true" aria-labelledby="me-modal-title">
+  <div class="me-modal-inner">
+    <div class="me-header">
+      <div class="me-header-title" id="me-modal-title">📝 數學編輯器</div>
+      <button class="me-apply-btn" onclick="applyMathEditor()">✓ 套用到轉換器</button>
+      <button class="me-cancel-btn" onclick="closeMathEditor()">✗ 關閉</button>
+    </div>
+    <div class="me-body">
+	<h1>通用數學編輯器</h1>
+   <div>
+    <a role="navigation">編輯</a>
+	<button data-text="切換包覆方式" id="toggleDelimiterButton" onclick="toggleDelimiter()" style="background-color: #ccffcc;"></button>
+	<button data-text="插入數學式分隔符" onclick="insertMathDelimiters()">插入數學式</button>
+	<button data-text="整理包覆方式" onclick="convertAllDelimiters()">整理</button>
+	<a role="navigation">文件</a>
+    <input type="file" id="fileInput" accept=".txt" style="display:none" onchange="openFile(event)">
+    <button data-text="打開純文字檔" onclick="document.getElementById('fileInput').click()">打開 TXT</button>
+    <button data-text="選項斷行、換題空行" onclick="formatOptions()">試卷調整</button>
+    <button data-text="取代" onclick="replaceText()">取代</button>
+	  <button data-text="MathPix 圖片語法處理" onclick="convertMarkdownToHTML()">MPX</button>
+	  <button data-text="去掉大寫間空格" onclick="delspace()">DS</button>
+	  <button data-text="注意！無法復原" onclick="clearAll();">清空</button><br>
+  	<a role="navigation">運算符號</a>
+  	<button data-text="乘號" onclick="insertMath('\\times\ ')">×</button>
+	<button data-text="除號" onclick="insertMath('\\div\ ')">÷</button>
+	<button data-text="加減/正負" onclick="insertMath('\\pm\ ')">±</button>
+	<button data-text="比號 (a\ratio b = a:b)" onclick="insertMath('\\ratio\ ')">比</button>
+	<button data-text="比例號 (::)" onclick="insertMath('\\proportion\ ')">比例</button>
+  	<a role="navigation">關係符號</a>
+	<button data-text="小於等於" onclick="insertMath('\\le\ ')">≤</button>
+	<button data-text="大於等於" onclick="insertMath('\\ge\ ')">≥</button>
+	<button data-text="不等於" onclick="insertMath('\\ne\ ')">≠</button>
+	<button data-text="約等於" onclick="insertMath('\\approx\ ')">≈</button>
+	<button data-text="近似於" onclick="insertMath('\\fallingdotseq\ ')">≒</button>
+	<button data-text="全等" onclick="insertMath('\\cong\ ')">≅</button>
+	<button data-text="相似" onclick="insertMath('\\sim\ ')">∼</button>
+	<button data-text="平行" onclick="insertMath('\\parallel\ ')">∥</button>
+	<button data-text="垂直" onclick="insertMath('\\perp\ ')">⊥</button>
+  	<a role="navigation">希臘字母</a>
+  	<select id="select-letter" onchange="insertGreekLetter()">
+      <option value="">請選擇</option>
+      <option value="">小寫</option>
+      <option value="\alpha">α</option>
+      <option value="\beta">β</option>
+      <option value="\gamma">γ</option>
+      <option value="\delta">δ</option>
+      <option value="\epsilon">ε</option>
+      <option value="\zeta">ζ</option>
+      <option value="\eta">η</option>
+      <option value="\theta">θ</option>
+      <option value="\iota">ι</option>
+      <option value="\kappa">κ</option>
+      <option value="\lambda">λ</option>
+      <option value="\mu">μ</option>
+      <option value="\nu">ν</option>
+      <option value="\xi">ξ</option>
+      <option value="\omicron">ο</option>
+      <option value="\pi">π</option>
+      <option value="\rho">ρ</option>
+      <option value="\sigma">σ</option>
+      <option value="\tau">τ</option>
+      <option value="\upsilon">υ</option>
+      <option value="\phi">φ</option>
+      <option value="\chi">χ</option>
+      <option value="\psi">ψ</option>
+      <option value="\omega">ω</option>
+      <option value="">大寫</option>
+      <option value="\Alpha">Α</option>
+      <option value="\Beta">Β</option>
+      <option value="\Gamma">Γ</option>
+      <option value="\Delta">Δ</option>
+      <option value="\Epsilon">Ε</option>
+      <option value="\Zeta">Ζ</option>
+      <option value="\Eta">Η</option>
+      <option value="\Theta">Θ</option>
+      <option value="\Iota">Ι</option>
+      <option value="\Kappa">Κ</option>
+      <option value="\Lambda">Λ</option>
+      <option value="\Mu">Μ</option>
+      <option value="\Nu">Ν</option>
+      <option value="\Xi">Ξ</option>
+      <option value="\Omicron">Ο</option>
+      <option value="\Pi">Π</option>
+      <option value="\Rho">Ρ</option>
+      <option value="\Sigma">Σ</option>
+      <option value="\Tau">Τ</option>
+      <option value="\Upsilon">Υ</option>
+      <option value="\Phi">Φ</option>
+      <option value="\Chi">Χ</option>
+      <option value="\Psi">Ψ</option>
+      <option value="\Omega">Ω</option>
+    </select>
+	<br>
+    <a role="navigation">常用符號</a>	
+	<button data-text="因為" onclick="insertMath('\\because\ ')">∵</button>
+	<button data-text="所以" onclick="insertMath('\\therefore\ ')">∴</button>
+	<button data-text="度" onclick="insertMath('^{\\circ} ')">°</button>
+	<button data-text="圓週率" onclick="insertMath('\\pi\ ')">π</button>
+	<button data-text="無限" onclick="insertMath('\\infty\ ')">∞</button>
+	<button data-text="交集" onclick="insertMath('\\cap\ ')">∩</button>
+	<button data-text="聯集" onclick="insertMath('\\cup\ ')">∪</button>
+	<button data-text="百分率" onclick="insertMath('\\%\ ')">%</button>
+	<button data-text="千分率" onclick="insertMath('‰\ ')">‰</button>
+	<button data-text="大括號 { }" onclick="insertMath('\\\{ \\\}')">{ }</button>
+	<button data-text="絕對值 |...|" onclick="insertMath('|{}|')">|x|</button>
+	  <select id="set-symbols" onchange="insertSymbols()">
+		<option value="">其他符號</option>
+		<optgroup label="箭頭符號">
+		  <option value="\rightarrow">→ (右箭頭)</option>
+		  <option value="\leftarrow">← (左箭頭)</option>
+		  <option value="\leftrightarrow">↔ (雙向箭頭)</option>
+		  <option value="\Rightarrow">⇒ (雙線右箭頭)</option>
+		  <option value="\Leftarrow">⇐ (雙線左箭頭)</option>
+		  <option value="\Leftrightarrow">⇔ (雙線雙向箭頭)</option>
+		  <option value="\uparrow">↑ (上箭頭)</option>
+		  <option value="\downarrow">↓ (下箭頭)</option>
+		  <option value="\updownarrow">↕ (上下箭頭)</option>
+		  <option value="\mapsto">↦ (映射箭頭)</option>
+		  <option value="\longmapsto">⟼ (長映射箭頭)</option>
+		  <option value="\rightharpoonup">⇀ (右半箭頭)</option>
+		  <option value="\rightharpoondown">⇁ (右半箭頭向下)</option>
+		  <option value="\leftharpoonup">↼ (左半箭頭)</option>
+		  <option value="\leftharpoondown">↽ (左半箭頭向下)</option>
+		</optgroup>
+		<optgroup label="集合符號">
+		  <option value="\in">∈ (屬於)</option>
+		  <option value="\notin">∉ (不屬於)</option>
+		  <option value="\ni">∋ (包含)</option>
+		  <option value="\subset">⊂ (真子集)</option>
+		  <option value="\supset">⊃ (真超集)</option>
+		  <option value="\subseteq">⊆ (子集)</option>
+		  <option value="\supseteq">⊇ (超集)</option>
+		  <option value="\emptyset">∅ (空集)</option>
+		  <option value="\forall">∀ (任意)</option>
+		  <option value="\exists">∃ (存在)</option>
+		</optgroup>
+		<optgroup label="數集">
+		  <option value="\mathbb{N}">ℕ (自然數集)</option>
+		  <option value="\mathbb{Z}">ℤ (整數集)</option>
+		  <option value="\mathbb{Q}">ℚ (有理數集)</option>
+		  <option value="\mathbb{R}">ℝ (實數集)</option>
+		  <option value="\mathbb{C}">ℂ (複數集)</option>
+		</optgroup>
+		<optgroup label="微積分符號">
+		  <option value="\int_{a}^{b} f(x) \,dx">∫ (定積分)</option>
+		  <option value="\iint_{D} f(x,y) \,dA">∬ (二重積分)</option>
+		  <option value="\iiint_{V} f(x,y,z) \,dV">∭ (三重積分)</option>
+		  <option value="\oint_{C} f(z) \,dz">∮ (曲線積分)</option>
+		  <option value="\frac{\partial f}{\partial x}">∂ (偏導數)</option>
+		  <option value="\nabla f = \left(\frac{\partial f}{\partial x}, \frac{\partial f}{\partial y}, \frac{\partial f}{\partial z}\right)">∇ (梯度)</option>
+		  <option value="\lim_{x \to a} f(x)">lim (極限)</option>
+		  <option value="\sum_{n=1}^{\infty} a_n">∑ (級數)</option>
+		  <option value="\prod_{i=1}^{n} x_i">∏ (連乘)</option>
+		  <option value="\frac{d}{dx} f(x)">d/dx (導數)</option>
+		  <option value="\int_{-\infty}^{\infty} f(x) \,dx">∞ (無窮積分)</option>
+		</optgroup>
+	  </select>
+  <br>
+  	<a role="navigation">幾何</a>
+	<button data-text="角 \angle{端點}" onclick="insertMath('\\angle{}')">∠</button>
+	<button data-text="三角形 \triangle{頂點}" onclick="insertMath('\\triangle{}')">△</button>
+  	<button data-text="線段 \overline{端點}" onclick="insertMath('\\overline{}')">線段</button>
+  	<button data-text="射線 \overrightarrow{端點}" onclick="insertMath('\\overrightarrow{}')">射線</button>
+  	<button data-text="射線 \overleftrightarrow{端點}" onclick="insertMath('\\overleftrightarrow{}')">直線</button>
+  	<button data-text="弧 \overset{\frown}{端點}" onclick="insertMath('\\overset{\\frown}{}')">弧</button>
+  	<button data-text="向量 \vec{文字}" onclick="insertMath('\\vec{}')">向量</button>
+	<a role="navigation">三角函數</a>
+		<select id="select-trig" onchange="insertTrigFunction()">
+		  <option value="">請選擇</option>
+		  <option value="\sin">sin</option>
+		  <option value="\cos">cos</option>
+		  <option value="\tan">tan</option>
+		  <option value="\csc">csc</option>
+		  <option value="\sec">sec</option>
+		  <option value="\cot">cot</option>
+		  <option value="\arcsin">arcsin</option>
+		  <option value="\arccos">arccos</option>
+		  <option value="\arctan">arctan</option>
+		  <option value="\sinh">sinh</option>
+		  <option value="\cosh">cosh</option>
+		  <option value="\tanh">tanh</option>
+		</select>
+    <button data-text="切換同步捲動" id="toggleSyncButton" onclick="toggleSync()" style="background-color: #ccffcc;">同步捲動：開</button>
+  	<br>
+  	<a role="navigation">層次</a>
+  	<button data-text="分數 \frac{分子}{分母}" onclick="insertMath('\\frac{}{}')">分數</button>
+  	<button data-text="上標/指數 ^{n}" onclick="insertMath('^{}')">xⁿ</button>
+  	<button data-text="下標/底數 _{n}" onclick="insertMath('_{}')">xₙ</button>
+  	<button data-text="根號 \sqrt{n}" onclick="insertMath('\\sqrt{}')">√x</button>
+  	<button data-text="n 次方根 \sqrt[n]{m}" onclick="insertMath('\\sqrt[n]{}')">n次方根 ∛x</button>
+  	<button data-text="聯立方程式 \begin{cases} {第一式} &amp;{註記} \\ {第二式} &amp;{註記} \end{cases}" onclick="insertMath('\\begin{cases} {} &{} \\\\ {} &{} \\end{cases}')">聯立方程式</button>
+  	<button data-text="總和 \sum\limits_{起點}^{終點}" onclick="insertMath('\\sum\\limits_{}^{}')">Σ</button>
+  	<button data-text="極值 \lim\limits_{{起點} \to {終點}}" onclick="insertMath('\\lim\\limits_{{} \\to {}}')">lim</button>
+  	<button data-text="數對 \log_{基數/底}" onclick="insertMath('\\log_{}')">log</button>
+  	<button data-text="矩陣 \left [ \begin{matrix} {} &{} \\ {} &{} \end{matrix} \right ]" onclick="insertMath('\\left [ \\begin{matrix} {} &{} \\\\ {} &{} \\end{matrix} \\right ]')">矩陣</button>
+  	<button data-text="行列式 \begin{vmatrix} {} &{} \\ {} &{} \end{vmatrix}" onclick="insertMath('\\begin{vmatrix} {} &{} \\\\ {} &{} \\end{vmatrix}')">行列式</button>
+  	<button data-text="表格 \begin{array} {cc} {} &{} &{} \\ {} &{} &{} \end{array} " onclick="insertMath('\\begin{array} {} {A} &{B} &{C} \\\\ {1} &{2} &{3} \\end{array}')">表格</button>
+	</div>   
+	<div class="container">
+		<textarea id="latexInput" placeholder="在此輸入含 LaTeX 語法的文本"></textarea>
+		<div id="preview"></div>
+	</div>
+	<div>
+	<button data-text="另存文字檔" onclick="saveLatexInput()">儲存 LaTeX 為 TXT</button> 
+	<button data-text="另存 LaTeX+MathJax HTML 檔" onclick="savePreviewAsHTML()">另存 Preview 為 HTML</button>
+	</div>
+
+	<textarea id="mathmlOutput" placeholder="MathML 轉換結果" readonly></textarea> <button data-text="另存網頁檔" onclick="saveMathMLOutput()">儲存 MathML 為 HTML</button> 
+
+    </div>
+  </div>
+</div>
+<script>
+// ======================================================================
+// 數學編輯器 modal 開關與套用
+// ======================================================================
+var _meModalReturn = null, _meModalTrap = null;
+var _ME_FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+function openMathEditor() {
+  initMathEditor();
+  var ta = document.getElementById('latexInput');
+  var l2nIn = document.getElementById('l2n-in');
+  if (ta && l2nIn) {
+    ta.value = l2nIn.value;
+    if (typeof updatePreview === 'function') updatePreview();
+  }
+  _meModalReturn = document.activeElement;
+  var modalEl = document.getElementById('me-modal');
+  modalEl.classList.add('open');
+  setTimeout(function(){ if (ta) ta.focus(); }, 100);
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeMathEditor(); return; }
+    if (e.key !== 'Tab') return;
+    var els = Array.from(modalEl.querySelectorAll(_ME_FOCUSABLE));
+    if (!els.length) return;
+    var first = els[0], last = els[els.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  modalEl.addEventListener('keydown', onKey);
+  _meModalTrap = function() { modalEl.removeEventListener('keydown', onKey); };
+}
+function closeMathEditor() {
+  document.getElementById('me-modal').classList.remove('open');
+  if (_meModalTrap) { _meModalTrap(); _meModalTrap = null; }
+  if (_meModalReturn) { _meModalReturn.focus(); _meModalReturn = null; }
+}
+function applyMathEditor() {
+  var ta = document.getElementById('latexInput');
+  var l2nIn = document.getElementById('l2n-in');
+  if (ta && l2nIn) {
+    l2nIn.value = ta.value;
+    window.convert();
+  }
+  closeMathEditor();
+}
+// ESC 關閉 modal
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && document.getElementById('me-modal').classList.contains('open')) {
+    closeMathEditor();
+  }
+});
+
+// ======================================================================
+// Math Editor (整合自 math-editor3q.htm)
+// 所有函式放全域讓 HTML onclick 能找到；
+// 需要 DOM 的事件綁定延遲到 initMathEditor() 首次呼叫
+// ======================================================================
+var _mathEditorInited = false;
+function initMathEditor() {
+  if (_mathEditorInited) return;
+  _mathEditorInited = true;
+  // 綁定 latexInput / preview 事件（modal 開啟後 DOM 已就緒）
+  var _li = document.getElementById('latexInput');
+  var _pv = document.getElementById('preview');
+  if (_li) {
+    _li.addEventListener('input', updatePreview);
+    _li.addEventListener('scroll', syncScroll);
+    _li.addEventListener('keydown', handleKeyDown);
+    _li.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'm') { e.preventDefault(); wrapMathExpression(this, false); }
+    });
+    _li.addEventListener('keydown', function(e) {
+      if (e.altKey && e.key === 'm') { e.preventDefault(); wrapMathExpression(this, true); }
+    });
+  }
+  if (_pv) _pv.addEventListener('scroll', syncScroll);
+  var _cadb = document.getElementById('convertAllDelimitersButton');
+  if (_cadb) _cadb.textContent = "全部轉換為 \\( \\)";
+  // Set initial textContent on the toggle button via JS rather than
+  // leaving \( \) in the raw HTML — otherwise MathJax scans the DOM,
+  // sees the delimiters, and renders the empty pair away, leaving only
+  // "使用 " visible until the user clicks the button once.
+  var _tdb = document.getElementById('toggleDelimiterButton');
+  if (_tdb) _tdb.textContent = "使用 \\( \\)";
+  var _spb = document.querySelector('#savePreviewButton');
+  if (_spb) _spb.addEventListener('click', savePreviewAsHTML);
+}
+
+// —— 以下為 math-editor 原始腳本（去掉無用的 DOMContentLoaded 綁定，改由 initMathEditor 統一處理）——
+
+	       let isSyncEnabled = true;
+	   
+	           function syncScroll(event) {
+	               if (!isSyncEnabled) return;
+	               
+	               const latexInput = document.getElementById('latexInput');
+	               const preview = document.getElementById('preview');
+	               if (event.target.id === 'latexInput') {
+	                   preview.scrollTop = latexInput.scrollTop;
+	               } else {
+	                   latexInput.scrollTop = preview.scrollTop;
+	               }
+	           }
+	   
+	           function toggleSync() {
+	               isSyncEnabled = !isSyncEnabled;
+	               const button = document.getElementById('toggleSyncButton');
+	               if (isSyncEnabled) {
+	                   button.textContent = '同步捲動：開';
+	                   button.style.backgroundColor = '#ccffcc';
+	               } else {
+	                   button.textContent = '同步捲動：關';
+	                   button.style.backgroundColor = '#ffcccc';
+	               }
+	           }
+	       function handleKeyDown(event) {
+	           if (event.key === 'Enter') {
+	               event.preventDefault();
+	               const textarea = document.getElementById('latexInput');
+	               const start = textarea.selectionStart;
+	               const end = textarea.selectionEnd;
+	               const before = textarea.value.substring(0, start);
+	               const after = textarea.value.substring(end, textarea.value.length);
+	               textarea.value = before + '\n' + after;
+	               textarea.selectionStart = textarea.selectionEnd = start + 1;
+	               insertNewLineInMathML();
+	               updatePreview();
+	           }
+	       }
+
+	       function insertMathBrackets(type) {
+	           const text = type === '$' ? '$$' : '\\(\\)';
+	           insertText(text, type === '$' ? 1 : 2);
+	           document.getElementById('latexInput').focus();
+	       }
+		   
+	       function formatOptions() {
+	           const textarea = document.getElementById('latexInput');
+	           let text = textarea.value;
+	           
+	           // 將制表符（Tab）和全形空格轉換為半形空格，並將多個連續空格轉換為單個空格
+	           text = text.replace(/\t/g, " ").replace(/　/g, " ").replace(/ {2,}/g, " ").replace(/（/g, '(').replace(/）/g, ')');
+	           // 在數字與中文間添加空格
+				text = text.replace(/(\d)([^\s\d\(\)\{\}\[\]\.,:;\-\+\*\/\\<>!?='"$&%#@`^~｜|a-zA-Z])/g, '$1 $2');
+				text = text.replace(/([^\s\d\(\)\{\}\[\]\.,:;\-\+\*\/\\<>!?='"$&%#@`^~｜|a-zA-Z])(\d)/g, '$1 $2');
+	           // 分割文本為段落
+	           let paragraphs = text.split(/\n\s*/);
+	           
+	           // 處理每個段落
+	           paragraphs = paragraphs.map((paragraph, index) => {
+	               // 檢查這個段落是否包含選項
+	               if (/\([A-Z]\)/.test(paragraph)) {
+	                   // 分割並格式化選項
+	                   let options = paragraph.split(/(?=\([A-D]\))/);
+	                   options = options.map(option => option.trim().replace(/^\(([A-D])\)\s*/, "($1) "));
+	                   // 在選項段落後添加一個換行符
+	                   return options.join('\n') + '\n';
+	               }
+	               // 對於非選項段落，在它前面添加一個換行符
+	               return paragraph;
+	           });
+	           
+	           // 重新組合文本，並在每個段落之間添加一個空行
+	           text = paragraphs.join('\n');
+	           
+	           // 移除選項間的空行，但保留最後一個選項與下一段之間的空行
+	           text = text.replace(/(\([A-D]\)\s[^\n]*)(\n\s*\n(?=\([A-D]\)))/g, '$1\n');
+	           
+	           textarea.value = text.trim();
+	           updatePreview();
+	       }
+
+	       function replaceText() {
+			   const textarea = document.getElementById('latexInput');
+			   
+			   // 使用 prompt 獲取要查找的文本
+			   const findText = prompt("請輸入要查找的文本：");
+			   if (findText === null || findText === '') {
+				   alert('請輸入要查找的文本');
+				   return;
+			   }
+			   
+			   // 使用 prompt 獲取要替換的文本
+			   const replaceText = prompt("請輸入要替換的文本：");
+			   if (replaceText === null) {
+				   return; // 用戶取消了操作
+			   }
+			   
+			   const text = textarea.value;
+			   const newText = text.replace(new RegExp(escapeRegExp(findText), 'g'), replaceText);
+			   
+			   textarea.value = newText;
+			   updatePreview();
+			   }
+			   
+			   // 用於轉義正則表達式中的特殊字符
+
+			   function escapeRegExp(string) {
+				   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			   }
+
+			let useParentheses = true;
+
+			function toggleDelimiter() {
+				useParentheses = !useParentheses;
+				const toggleButton = document.getElementById('toggleDelimiterButton');
+				const convertButton = document.getElementById('convertAllDelimitersButton');
+				if (useParentheses) {
+					if (toggleButton) { toggleButton.textContent = "使用 \\( \\)"; toggleButton.style.backgroundColor = "#ccffcc"; }
+					if (convertButton) convertButton.textContent = "全部轉換為 \\( \\)";
+				} else {
+					if (toggleButton) { toggleButton.textContent = "使用 $ $"; toggleButton.style.backgroundColor = "#ffcccc"; }
+					if (convertButton) convertButton.textContent = "全部轉換為 $ $";
+				}
+				updateAllButtons();
+			}
+
+			function updateAllButtons() {
+				// No-op: previous implementation called .match(...)[1] on every
+				// button[onclick^="insertMath"] without null-checking, throwing
+				// TypeError when any button's onclick didn't match the pattern.
+				// The body merely round-tripped onclick to itself, so removing
+				// it is behavior-preserving for the success path.
+			}
+
+			function convertAllDelimiters() {
+				const textarea = document.getElementById('latexInput');
+				let text = textarea.value;
+				
+				const targetDelimiters = useParentheses ? ['\\(', '\\)'] : ['$', '$'];
+
+				// 定義轉換函數
+				function convertDelimiters(text, fromStart, fromEnd, toStart, toEnd) {
+					let result = '';
+					let insideMath = false;
+					let depth = 0;
+					let mathContent = '';
+
+					for (let i = 0; i < text.length; i++) {
+						if (text.startsWith(fromStart, i) && (!insideMath || depth > 0)) {
+							if (insideMath) {
+								mathContent += fromStart;
+								depth++;
+							} else {
+								result += toStart;
+								insideMath = true;
+							}
+							i += fromStart.length - 1;
+						} else if (text.startsWith(fromEnd, i) && insideMath) {
+							if (depth > 0) {
+								mathContent += fromEnd;
+								depth--;
+							} else {
+								result += mathContent + toEnd;
+								mathContent = '';
+								insideMath = false;
+							}
+							i += fromEnd.length - 1;
+						} else if (insideMath) {
+							mathContent += text[i];
+						} else {
+							result += text[i];
+						}
+					}
+
+					// 處理未閉合的數學環境
+					if (insideMath) {
+						result += fromStart + mathContent;
+					}
+
+					return result;
+				}
+
+				// 轉換所有分隔符
+				text = convertDelimiters(text, '$', '$', targetDelimiters[0], targetDelimiters[1]);
+				text = convertDelimiters(text, '\\(', '\\)', targetDelimiters[0], targetDelimiters[1]);
+				text = convertDelimiters(text, '\\[', '\\]', targetDelimiters[0], targetDelimiters[1]);
+
+				textarea.value = text;
+				updatePreview();
+			}
+		
+			function insertMathDelimiters() {
+				const delimiters = useParentheses ? ['\\(', '\\)'] : ['$', '$'];
+				const textarea = document.getElementById('latexInput');
+				const start = textarea.selectionStart;
+				const end = textarea.selectionEnd;
+				if (start !== end) {
+					// Wrap the selected text with the delimiters
+					const selected = textarea.value.slice(start, end);
+					const wrapped = delimiters[0] + selected + delimiters[1];
+					textarea.value = textarea.value.slice(0, start) + wrapped + textarea.value.slice(end);
+					textarea.selectionStart = textarea.selectionEnd = start + wrapped.length;
+				} else {
+					// No selection: insert empty delimiters with cursor inside
+					insertText(delimiters[0] + delimiters[1], delimiters[0].length);
+				}
+				textarea.focus();
+				updatePreview();
+			}
+
+			function insertMath(math) {
+				const textarea = document.getElementById('latexInput');
+				const start = textarea.selectionStart;
+				const end = textarea.selectionEnd;
+				const value = textarea.value;
+				
+				function isInMathEnvironment(pos) {
+					const beforeCursor = value.slice(0, pos);
+					const dollarPairs = (beforeCursor.match(/\$/g) || []).length;
+					const bracketPairs = (beforeCursor.match(/\\\(/g) || []).length - (beforeCursor.match(/\\\)/g) || []).length;
+					return (dollarPairs % 2 !== 0) || (bracketPairs > 0);
+				}
+
+				let newText, cursorPosition;
+				const delimiters = useParentheses ? ['\\(', '\\)'] : ['$', '$'];
+
+				if (isInMathEnvironment(start)) {
+					newText = value.slice(0, start) + math + value.slice(end);
+					cursorPosition = start + math.length;
+				} else {
+					newText = value.slice(0, start) + delimiters[0] + math + delimiters[1] + value.slice(end);
+					cursorPosition = start + delimiters[0].length + math.length;
+				}
+
+				const braceIndex = math.indexOf('{}');
+				if (braceIndex !== -1) {
+					cursorPosition = (isInMathEnvironment(start) ? start : start + delimiters[0].length) + braceIndex + 1;
+				}
+
+				textarea.value = newText;
+				textarea.selectionStart = textarea.selectionEnd = cursorPosition;
+				textarea.focus();
+				updatePreview();
+			}
+
+		   function insertTrigFunction() {
+				const select = document.getElementById('select-trig');
+				const value = select.value;
+				if (value) {
+					insertMath(value + ' ');  // 使用 insertMath 來插入三角函數
+					select.value = "";  // 重置選擇
+				}
+			}
+	       
+	       function insertGreekLetter() {
+	           const select = document.getElementById('select-letter');
+	           const value = select.value;
+	           if (value) {
+	               insertMath(value + ' ');  // 使用 insertMath 來插入希臘字母
+	               select.value = "";
+	           }
+	       }
+ 		   function insertSymbols() {
+           const select = document.getElementById('set-symbols');
+           const value = select.value;
+           if (value) {
+               insertMath(value + ' ');  // 使用 insertMath 來插入希臘字母
+               select.value = "";
+           }
+       }
+
+	   
+
+	       function insertText(text, cursorOffset) {
+	           const textarea = document.getElementById('latexInput');
+	           const start = textarea.selectionStart;
+	           const end = textarea.selectionEnd;
+	           const before = textarea.value.substring(0, start);
+	           const after = textarea.value.substring(end, textarea.value.length);
+	           textarea.value = before + text + after;
+	           
+	           // 如果文本包含 {}, 將游標放在 {} 中間
+	           const braceIndex = text.indexOf('{}');
+	           if (braceIndex !== -1) {
+	               textarea.selectionStart = textarea.selectionEnd = start + braceIndex + 1;
+	           } else {
+	               textarea.selectionStart = textarea.selectionEnd = start + cursorOffset;
+	           }
+	           
+	           textarea.focus();
+	           updatePreview();
+	       }
+
+	       function insertNewLineInMathML() {
+	           const latexInput = document.getElementById('latexInput').value;
+	           const mathmlOutput = document.getElementById('mathmlOutput');
+	           const lines = latexInput.split('\n');
+	           let mathmlContent = '';
+	           for (let i = 0; i < lines.length; i++) {
+	               mathmlContent += lines[i] + '<br>\n';
+	           }
+	           mathmlOutput.value = mathmlContent;
+	       }
+
+		
+			function updatePreview() {
+				const latex = document.getElementById('latexInput').value.replace(/\n/g, '<br>');
+				const preview = document.getElementById('preview');
+				const mathmlOutput = document.getElementById('mathmlOutput');
+				
+				// 將所有數學式轉換為 \(...\) 格式
+				let wrappedLatex = latex
+					.replace(/(\$)(?!\$)(.+?)(?<!\$)(\$)/g, '\\($2\\)')
+					.replace(/\\\[(.*?)\\\]/g, '\\($1\\)');
+				
+				// 確保所有 \(...\) 格式的數學式都被正確識別
+				wrappedLatex = wrappedLatex.replace(/\\\((.+?)\\\)/g, '\\($1\\)');
+				
+				preview.innerHTML = wrappedLatex;
+				MathJax.typesetPromise([preview]).then(() => {
+					const previewHTML = preview.innerHTML;
+					mathmlOutput.value = formatXML(previewHTML);
+				}).catch((err) => {
+					mathmlOutput.value = `錯誤: ${err.message}`;
+				});
+			}
+
+	       function formatXML(xml) {
+	           // 格式化 XML 以便更好地顯示
+	           const PADDING = '  ';
+	           const reg = /(>)(<)(\/*)/g;
+	           let pad = 0;
+	           let formatted = '';
+	           xml = xml.replace(reg, '$1\r\n$2$3');
+	           xml.split('\r\n').forEach((node, index) => {
+	               let indent = 0;
+	               if (node.match(/.+<\/\w[^>]*>$/)) {
+	                   indent = 0;
+	               } else if (node.match(/^<\/\w/)) {
+	                   if (pad != 0) {
+	                       pad -= 1;
+	                   }
+	               } else if (node.match(/^<\w([^>]*[^\/])?>.*$/)) {
+	                   indent = 1;
+	               } else {
+	                   indent = 0;
+	               }
+
+	               let padding = '';
+	               for (let i = 0; i < pad; i++) {
+	                   padding += PADDING;
+	               }
+
+	               formatted += padding + node + '\r\n';
+	               pad += indent;
+	           });
+
+	           return formatted;
+	       }
+
+	       function saveLatexInput() {
+	           const latexInput = document.getElementById('latexInput').value;
+	           const blob = new Blob([latexInput], { type: 'text/plain;charset=utf-8' });
+	           const link = document.createElement('a');
+	           link.href = URL.createObjectURL(blob);
+	           link.download = 'latex_input.txt';
+	           document.body.appendChild(link);
+	           link.click();
+	           document.body.removeChild(link);
+	       }
+
+	       function saveMathMLOutput() {
+	           const mathmlOutput = document.getElementById('mathmlOutput').value;
+	           const blob = new Blob([mathmlOutput], { type: 'text/html;charset=utf-8' });
+	           const link = document.createElement('a');
+	           link.href = URL.createObjectURL(blob);
+	           link.download = 'mathml_output.html';
+	           document.body.appendChild(link);
+	           link.click();
+	           document.body.removeChild(link);
+	       }
+
+	       function openFile(event) {
+	           const input = event.target;
+	           const reader = new FileReader();
+	           reader.onload = function() {
+	               const text = reader.result;
+	               document.getElementById('latexInput').value = text;
+	               updatePreview();
+	           };
+	           reader.readAsText(input.files[0]);
+	       }
+		   
+		function jumpToNextBraceOrLatex(forward = true) {
+			const textarea = document.getElementById('latexInput');
+			const text = textarea.value;
+			const cursorPosition = textarea.selectionStart;
+
+			// 正則表達式匹配 {} 和 LaTeX 分隔符
+			const regex = /\{|\}|\\\(|\\\)|\$\$/g;
+			let match;
+			let nextPosition = cursorPosition;
+
+			if (forward) {
+				// 向前搜索
+				regex.lastIndex = cursorPosition;
+				while ((match = regex.exec(text)) !== null) {
+					if (match.index > cursorPosition) {
+						nextPosition = match.index + match[0].length;
+						break;
+					}
+				}
+			} else {
+				// 向後搜索
+				const reverseText = text.split('').reverse().join('');
+				const reverseRegex = /\}|\{|\)\\\(|\\\|\$\$/g;
+				const reverseCursorPosition = text.length - cursorPosition;
+				reverseRegex.lastIndex = reverseCursorPosition;
+				while ((match = reverseRegex.exec(reverseText)) !== null) {
+					if (match.index > reverseCursorPosition) {
+						nextPosition = text.length - (match.index + match[0].length);
+						break;
+					}
+				}
+			}
+
+			// 設置新的光標位置
+			textarea.setSelectionRange(nextPosition, nextPosition);
+			textarea.focus();
+		}
+		
+    // ctrl+m / alt+m 綁定已搬到 initMathEditor() 統一處理
+    
+    function wrapMathExpression(textarea, moveCursorInside) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const value = textarea.value;
+        // 找到當前行的開始和結束
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = value.indexOf('\n', end);
+        const currentLine = value.substring(lineStart, lineEnd === -1 ? value.length : lineEnd);
+        // 在當前行內找到包裹結束的位置
+        const cursorPosInLine = start - lineStart;
+        let wrapEndIndex = cursorPosInLine;
+        const chineseRegex = /[\u4e00-\u9fa5]/; // 匹配中文字符
+        const fullWidthPuncRegex = /[\uFF00-\uFFEF]/; // 匹配全形標點
+        while (wrapEndIndex < currentLine.length) {
+            const char = currentLine[wrapEndIndex];
+            if (char === ' ' || chineseRegex.test(char) || fullWidthPuncRegex.test(char)) {
+                break;
+            }
+            wrapEndIndex++;
+        }
+        // 獲取要包裹的文本
+        const textToWrap = currentLine.substring(cursorPosInLine, wrapEndIndex);
+        // 根據當前設置選擇分隔符
+        const delimiters = useParentheses ? ['\\(', '\\)'] : ['$', '$'];
+        // 創建新的行文本
+        const newLineText = currentLine.substring(0, cursorPosInLine) + 
+                            delimiters[0] + textToWrap + delimiters[1] + 
+                            currentLine.substring(wrapEndIndex);
+        // 更新整個文本區域的值
+        textarea.value = value.substring(0, lineStart) + newLineText + value.substring(lineEnd === -1 ? value.length : lineEnd);
+        
+        let newCursorPos;
+        if (moveCursorInside) {
+            // 如果是 alt + M，將游標移動到分隔符內部
+            newCursorPos = lineStart + cursorPosInLine + delimiters[0].length;
+        } else {
+            // 如果是 ctrl + M，保持原有邏輯
+            const validStartRegex = /[a-zA-Z0-9\\]/;
+            newCursorPos = lineStart + cursorPosInLine + delimiters[0].length + textToWrap.length + delimiters[1].length;
+            let foundValid = false;
+            while (newCursorPos < value.length) {
+                if (value[newCursorPos] === '\n') {
+                    // 如果遇到換行符，停在下一行開頭
+                    newCursorPos++;
+                    break;
+                }
+                if (validStartRegex.test(value[newCursorPos])) {
+                    foundValid = true;
+                    break;
+                }
+                newCursorPos++;
+            }
+            // 如果沒找到有效字符，則保持在包裹符號後
+            if (!foundValid) {
+                newCursorPos = lineStart + cursorPosInLine + delimiters[0].length + textToWrap.length + delimiters[1].length;
+            }
+        }
+        
+        // 更新光標位置
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        // 更新預覽
+        updatePreview();
+    }
+
+
+		
+		function convertLatexTableToHTML(latexTable) {
+			// 移除 tabular 环境的开始和结束标记
+			latexTable = latexTable.replace(/\\begin{tabular}.*?\n/, '')
+								   .replace(/\\end{tabular}/, '');
+
+			let html = '<table border="1">';
+			let rows = latexTable.split('\\\\').filter(row => row.trim() !== '');
+			let inHeader = false;
+			let isFirstRow = true;
+
+			rows.forEach((row, index) => {
+				row = row.trim();
+
+				if (row.includes('\\hline')) {
+					if (!isFirstRow) {
+						html += inHeader ? '</th></tr>' : '</td></tr>';
+					}
+					inHeader = false;
+					isFirstRow = false;
+					row = row.replace('\\hline', '');
+				}
+
+				if (row !== '') {
+					if (row.includes('\\multicolumn')) {
+						html += '<tr><th colspan="2">';
+						inHeader = true;
+						row = row.replace(/\\multicolumn{\d+}{[^}]+}{([^}]+)}/, '$1');
+					} else if (!inHeader && !isFirstRow) {
+						html += '<tr>';
+					}
+
+					let cells = row.split('&');
+					cells.forEach((cell, cellIndex) => {
+						cell = cell.trim()
+							.replace(/\\\w+{([^}]+)}/, '$1') // 处理 \textbf 等命令
+							.replace(/(\$[^\$]+\$|\\\([^\)]+\\\))/g, match => {
+								// 将数学式包裹在 \(...\) 中
+								return '\\(' + match.replace(/^\$|\$$|\\\(|\\\)$/g, '') + '\\)';
+							})
+							.replace(/\\%/g, '%') // 处理百分号
+							.replace(/\\\s/g, ' '); // 处理 LaTeX 空格
+						
+						if (inHeader) {
+							html += (cellIndex === 0 && !isFirstRow ? '<th>' : '') + cell;
+						} else {
+							html += `<td>${cell}</td>`;
+						}
+					});
+
+					isFirstRow = false;
+				}
+			});
+
+			// 确保最后一行正确闭合
+			if (!isFirstRow) {
+				html += inHeader ? '</th></tr>' : '</td></tr>';
+			}
+
+			html += '</table>';
+			return html;
+		}
+
+		function convertMarkdownToHTML() {
+			const textarea = document.getElementById('latexInput');
+			let text = textarea.value;
+
+			// 首先替換 \(\qquad\)
+			text = text.replace(/\\qquad/g, "----");
+
+			// 轉換 LaTeX 表格
+			text = text.replace(/\\begin{tabular}[\s\S]*?\\end{tabular}/g, match => {
+				return convertLatexTableToHTML(match);
+			});
+
+			// 轉換圖片
+			text = text.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="Mathpix Image">');
+
+			// 轉換 Markdown 表格
+			text = text.replace(/(\|.+\|)\r?\n(\|[\s:]*[-]+[\s:]*\|[\s:]*[-]+[\s:]*\|.*)\r?\n((?:\|.+\|\r?\n?)+)/g, function(match, headerRow, separatorRow, bodyRows) {
+				// 將表格分成頭部、分隔行和內容部分
+				const headers = headerRow.trim().split('|').filter(cell => cell.trim() !== '');
+				const body = bodyRows.trim().split('\n').map(row => 
+					row.trim().split('|').filter(cell => cell.trim() !== '')
+				);
+				
+				// 構建 HTML 表格 - 移除換行符
+				let tableHTML = '<table border="1"><thead><tr>';
+				
+				// 添加表頭
+				headers.forEach(header => {
+					tableHTML += `<th>${header.trim()}</th>`;
+				});
+				
+				tableHTML += '</tr></thead><tbody>';
+				
+				// 添加表格內容
+				body.forEach(row => {
+					tableHTML += '<tr>';
+					row.forEach(cell => {
+						tableHTML += `<td>${cell.trim()}</td>`;
+					});
+					tableHTML += '</tr>';
+				});
+				
+				tableHTML += '</tbody></table>';
+				return tableHTML;
+			});
+
+			// 處理沒有分隔符行的簡單表格格式 (如果上面的匹配沒有成功)
+			text = text.replace(/(\|.+\|[\r\n]*)+/g, function(match) {
+				if (match.includes('<table')) return match; // 已經轉換過的不再處理
+				
+				const rows = match.trim().split(/[\r\n]+/);
+				if (rows.length <= 1) return match; // 只有一行則不處理
+				
+				// 檢查是否有分隔行 (|---|---|)
+				const hasSeparator = rows.some(row => /^\|[\s:]*[-]+[\s:]*\|/.test(row));
+				if (hasSeparator) return match; // 有分隔行的表格由上面的規則處理
+				
+				let tableHTML = '<table border="1">';
+				let isFirstRow = true;
+				
+				for (let row of rows) {
+					// 跳過分隔行
+					if (/^\|[\s:]*[-]+[\s:]*\|/.test(row)) continue;
+					
+					const cells = row.split('|').filter(cell => cell.trim() !== '');
+					if (cells.length === 0) continue;
+					
+					tableHTML += '<tr>';
+					
+					cells.forEach(cell => {
+						const tag = isFirstRow ? 'th' : 'td';
+						tableHTML += `<${tag}>${cell.trim()}</${tag}>`;
+					});
+					
+					tableHTML += '</tr>';
+					isFirstRow = false;
+				}
+				
+				tableHTML += '</table>';
+				return tableHTML;
+			});
+
+			// 轉換粗體
+			text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+			// 轉換斜體
+			text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+			// 轉換標題
+			text = text.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+			text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+			text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+
+			// 轉換列表
+			text = text.replace(/^\s*\*\s(.*)$/gm, '<li>$1</li>');
+			text = text.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+			// 轉換連結
+			text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>');
+
+			// 使用正則表達式替換 \section*{ } 和 \title{ }
+			text = text.replace(/\\section\*\{(.*?)\}/g, '$1');
+			text = text.replace(/\\title\s*\{([\s\S]*?)\}/g, '$1').trim();
+
+			// 使用正則表達式替換 / /
+			text = text.replace(/(\w+)\s*\/\s*\/\s*(\w+)/g, '$1 \\parallel $2');
+
+			textarea.value = text;
+			updatePreview();
+		}
+		function clearAll() {
+        // 清空 latexInput
+        document.getElementById('latexInput').value = '';
+    
+        // 清空 preview
+        document.getElementById('preview').innerHTML = '';
+    
+        // MathJax 3 使用 typesetPromise，不再有 Hub
+        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+            MathJax.typesetPromise([document.getElementById('preview')]).catch(function(){});
+        }
+    }
+		
+		document.addEventListener('keydown', function(e) {
+			const textarea = document.getElementById('latexInput');
+			if (document.activeElement === textarea) {
+				if (e.altKey && e.key === 'ArrowRight') {
+					e.preventDefault();
+					jumpToNextBraceOrLatex(true);
+				} else if (e.altKey && e.key === 'ArrowLeft') {
+					e.preventDefault();
+					jumpToNextBraceOrLatex(false);
+				}
+			}
+		});		
+		
+				   function savePreviewAsHTML() {
+				const clonedDoc = document.cloneNode(true);
+
+				// 保留 preview div
+				const previewDiv = clonedDoc.getElementById('preview');
+
+				// 清空 body，只保留 preview div
+				clonedDoc.body.innerHTML = '';
+				clonedDoc.body.appendChild(previewDiv);
+
+				// 移除所有不必要的元素
+				const elementsToRemove = clonedDoc.querySelectorAll('script, link, style, meta:not([charset]), button, textarea');
+				elementsToRemove.forEach(el => el.remove());
+
+				// 確保有 charset meta 標籤
+				if (!clonedDoc.querySelector('meta[charset]')) {
+					const meta = clonedDoc.createElement('meta');
+					meta.setAttribute('charset', 'UTF-8');
+					clonedDoc.head.appendChild(meta);
+				}
+
+				// 修改標題
+				const titleElement = clonedDoc.querySelector('title');
+				if (titleElement) {
+					titleElement.textContent = 'LaTeX Preview';
+				} else {
+					const newTitle = clonedDoc.createElement('title');
+					newTitle.textContent = 'LaTeX Preview';
+					clonedDoc.head.appendChild(newTitle);
+				}
+
+				// 添加 MathJax 腳本
+				const mathJaxScript = clonedDoc.createElement('script');
+				mathJaxScript.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+				clonedDoc.head.appendChild(mathJaxScript);
+
+				// 添加 MathJax 配置
+				const mathJaxConfig = clonedDoc.createElement('script');
+				mathJaxConfig.textContent = `
+					window.MathJax = {
+						tex: {
+							inlineMath: [['$', '$'], ['\\\\(', '\\\\)']]
+						}
+					};
+				`;
+				clonedDoc.head.insertBefore(mathJaxConfig, mathJaxScript);
+
+				const htmlContent = clonedDoc.documentElement.outerHTML;
+
+				const blob = new Blob([htmlContent], { type: 'text/html' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = 'latex_preview.html';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}
+
+			// 守衛：savePreviewButton 這個 id 實際上不存在於原始 HTML，保留空以避免報錯
+var _spb = document.querySelector('#savePreviewButton');
+if (_spb) _spb.addEventListener('click', savePreviewAsHTML);
+
+		function delspace() {
+			const input = document.getElementById('latexInput');
+			let text = input.value;
+			
+			// 移除 加減號前後空格
+			text = text.replace(/\s([+\-])\s/g, '$1');
+			
+			// 1. 移除 \right 和 \left
+			text = text.replace(/\\(right|left)(?![a-zA-Z])/g, '');
+			
+			// 2. 把 \mathrm{x} 變成 x (對任何單個字符)
+			text = text.replace(/\\mathrm\{([a-zA-Z0-9])\}/g, '$1');
+			
+			// 3. 移除數字後面接 x 或 y 的空格
+			text = text.replace(/(\d)\s+([xy])/g, '$1$2');
+			
+			// 原本的大寫字母間空格處理
+			text = text.replace(/\\\((.*?)\\\)/g, function(match, content) {
+				// 處理大寫字母之間的空格
+				const processed = content.replace(/([A-Z])\s+(?=[A-Z])/g, '$1');
+				return '\\(' + processed + '\\)';
+			});
+			
+			input.value = text;
+			// 觸發 change 事件
+			input.dispatchEvent(new Event('change'));
+		}
+		
+	
+
+</script>
 
 <script type="module">
 import init, { nemeth_from_mathml, spoken_text, navigate, nav_braille } from './mathcat-wasm/mathcat_nemeth.js';

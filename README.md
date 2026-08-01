@@ -20,6 +20,14 @@ vi-tools 的 `nemeth_converter.html`（nc）是完全獨立手刻的 LaTeX↔Nem
 規則書逐條稽核過 8 輪。用 MathCAT 當第二套獨立實作互相比對，能抓到規則書人工稽核漏掉的問題
 （也可能反過來抓到 MathCAT 的問題——過程中就抓到一個，見下方「已知問題」）。
 
+## 數學編輯器
+
+「📝 數學編輯器」是直接從 vi-tools 的 `nemeth_converter.html` 整段複製過來的（按鈕、彈出視窗、
+CSS、JS 全部照搬，只改了「套用到轉換器」按鈕呼叫的函式名稱以接上這裡的轉換流程）。nc 裡這段
+本身是整合自外部的「通用數學文件編輯器」（`math-editor3q.htm`），來源見
+[108 數學課綱與 LaTeX 語法](https://class.kh.edu.tw/19061/bulletin/msg_view/620)。授權狀態不明確，
+沿用 nc 已經在用的現況。
+
 ## 檔案結構
 
 ```
