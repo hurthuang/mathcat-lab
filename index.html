@@ -1586,7 +1586,17 @@ async function runConvert() {
   if (navActive) window.exitNav(); // 換了新算式，之前的導覽位置不再有意義
   const seq = ++convertSeq;
   let tex = document.getElementById('l2n-in').value.trim();
-  if (tex.startsWith('$') && tex.endsWith('$') && tex.length >= 2) tex = tex.slice(1, -1);
+  // 剝掉常見的數學定界符號——這裡只做「單一算式」轉換，不像 nc 需要靠這些
+  // 定界符號在一段文字裡找出哪裡是數學式，所以字面上的定界符號要先拿掉，
+  // 不然會被當成算式內容本身（例如數學編輯器習慣輸出 \( \) 包住整段）。
+  // 順序要先比對較長的 $$ 再比對單一 $，不然 $$...$$ 會被誤判剝成 $...$。
+  const DELIMS = [['$$', '$$'], ['\\(', '\\)'], ['\\[', '\\]'], ['$', '$']];
+  for (const [open, close] of DELIMS) {
+    if (tex.startsWith(open) && tex.endsWith(close) && tex.length >= open.length + close.length) {
+      tex = tex.slice(open.length, tex.length - close.length).trim();
+      break;
+    }
+  }
   if (!tex) {
     if (seq !== convertSeq) return;
     showPlainMessage('（尚未轉換）');
