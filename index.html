@@ -100,7 +100,7 @@ main{flex:1;padding:13px 18px;display:flex;flex-direction:column;gap:9px}
 /* Demo 版面：左欄輸入/控制（主講人操作），右欄三格堆疊
    （視覺呈現／點字／報讀文字，給觀眾看），右欄寬度是版面的大部分，
    每格都有足夠寬度顯示較長的算式或點字，不用切成三分之一那麼窄。 */
-.demo-layout{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+.demo-layout{display:grid;grid-template-columns:2fr 3fr;gap:16px;align-items:start}
 @media(max-width:900px){.demo-layout{grid-template-columns:1fr}}
 .demo-right{display:flex;flex-direction:column;gap:12px}
 .demo-box{font-size:1.25rem;line-height:1.7}
@@ -258,12 +258,7 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
 
 <main>
   <div class="info">
-    這不是正式工具，只做單一算式的 LaTeX → Nemeth 單向轉換，用來跟
-    <a href="https://hurthuang.github.io/vi-tools/nemeth_converter.html" target="_blank" rel="noopener">π 數學點字（nc，vi-tools）</a>的輸出互相對照、驗證。
-    引擎是 <a href="https://github.com/daisy/MathCAT" target="_blank" rel="noopener">MathCAT</a>
-    （JAWS／NVDA 2026.1+ 內建的同一套引擎），跟 nc 是完全獨立的兩套實作，
-    兩邊算出來不一樣不代表任何一邊一定錯，需要對照官方 Nemeth 規則書判斷。
-    不支援文字與算式混排，也不會持續跟進 MathCAT 上游更新。
+    使用 <a href="https://github.com/daisy/MathCAT" target="_blank" rel="noopener">MathCAT</a> 引擎。
   </div>
   <div class="demo-layout">
     <div class="pane demo-left">
@@ -283,17 +278,6 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
         <button class="btn" onclick="toggleMathml()">切換 MathML</button>
       </div>
       <div class="st" id="st"></div>
-      <div class="pane" id="nav-pane" style="display:none">
-        <div class="ph"><span class="dot p" aria-hidden="true"></span>導覽操作（結果顯示在右邊「報讀文字」「點字」兩格）</div>
-        <div class="acts">
-          <button class="btn" onclick="doNav('ZoomIn')">⤵ 放大進入</button>
-          <button class="btn" onclick="doNav('ZoomOut')">⤴ 縮小出來</button>
-          <button class="btn" onclick="doNav('MovePrevious')">← 上一個</button>
-          <button class="btn" onclick="doNav('MoveNext')">→ 下一個</button>
-          <button class="btn" onclick="doNav('ReadCurrent')">🔊 唸目前位置</button>
-          <button class="btn" onclick="exitNav()">結束導覽</button>
-        </div>
-      </div>
       <div class="pane" id="mathml-pane" style="display:none">
         <div class="ph"><span class="dot" aria-hidden="true"></span>MathML（中介結果）</div>
         <div class="box small" id="mathml-out"></div>
@@ -320,6 +304,17 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
       <div class="pane">
         <div class="ph">報讀文字（MathCAT 語音內容）</div>
         <div class="box demo-box" id="speech-text">（尚未朗讀）</div>
+      </div>
+      <div class="pane" id="nav-pane" style="display:none">
+        <div class="ph"><span class="dot p" aria-hidden="true"></span>導覽操作</div>
+        <div class="acts">
+          <button class="btn" onclick="doNav('ZoomIn')">⤵ 放大進入</button>
+          <button class="btn" onclick="doNav('ZoomOut')">⤴ 縮小出來</button>
+          <button class="btn" onclick="doNav('MovePrevious')">← 上一個</button>
+          <button class="btn" onclick="doNav('MoveNext')">→ 下一個</button>
+          <button class="btn" onclick="doNav('ReadCurrent')">🔊 唸目前位置</button>
+          <button class="btn" onclick="exitNav()">結束導覽</button>
+        </div>
       </div>
     </div>
   </div>
