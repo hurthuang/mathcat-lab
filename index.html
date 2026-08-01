@@ -14,6 +14,7 @@ window.MathJax={
 </script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
 <style>
+@font-face{font-family:'SimBraille';src:url('SIMBRL.TTF') format('truetype')}
 :root{
   --bg:#0b0d14;--surf:#13161f;--surf2:#1b1f2d;--bd:#262b3e;--bd2:#343b56;
   --blue:#5a99ff;--purple:#b39aff;--green:#4ee3a8;--red:#ff8b8b;
@@ -61,6 +62,9 @@ textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--focus-ring
 .info{font-size:.71rem;color:var(--dim);padding:5px 8px;background:var(--surf2);
   border-left:3px solid var(--red);border-radius:0 5px 5px 0}
 .info a{color:var(--blue)}
+.box.mono.font-ascii{font-family:'SimBraille',monospace;color:var(--text);font-size:1.3rem;letter-spacing:1px}
+select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);border-radius:5px;
+  padding:5px 9px;font-size:.76rem;font-family:inherit}
 </style>
 </head>
 <body>
@@ -89,7 +93,14 @@ textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--focus-ring
     </div>
   </div>
   <div class="pane">
-    <div class="ph"><span class="dot g" aria-hidden="true"></span>Nemeth 輸出（MathCAT）</div>
+    <div class="ph">
+      <span class="dot g" aria-hidden="true"></span>Nemeth 輸出（MathCAT）
+      <select id="brl-format" title="點字顯示格式" style="margin-left:auto" onchange="onFormatChange()">
+        <option value="unicode">Unicode 點字</option>
+        <option value="ascii">ASCII</option>
+        <option value="ascii-simbraille">ASCII + SimBraille 字型</option>
+      </select>
+    </div>
     <div class="box mono" id="l2n-out">（尚未轉換）</div>
   </div>
   <div class="acts">
@@ -115,6 +126,64 @@ function setStatus(msg, cls) {
   const el = document.getElementById('st');
   el.textContent = msg;
   el.className = 'st' + (cls ? ' ' + cls : '');
+}
+
+// Unicode 點字 (U+2800~U+283F) ↔ ASCII 對照表，跟 vi-tools 的 braille-input.html/
+// braille-to-text.html 用同一套 North American Braille Computer Code (NABCC)。
+function dotsToBits(dotsStr) {
+  let b = 0;
+  for (const ch of dotsStr) b |= (1 << (parseInt(ch, 10) - 1));
+  return b;
+}
+const NABCC_TABLE = [
+  ["", " "],
+  ["1", "a"], ["12", "b"], ["14", "c"], ["145", "d"], ["15", "e"], ["124", "f"], ["1245", "g"], ["125", "h"], ["24", "i"], ["245", "j"],
+  ["13", "k"], ["123", "l"], ["134", "m"], ["1345", "n"], ["135", "o"], ["1234", "p"], ["12345", "q"], ["1235", "r"], ["234", "s"], ["2345", "t"],
+  ["136", "u"], ["1236", "v"], ["2456", "w"], ["1346", "x"], ["13456", "y"], ["1356", "z"],
+  ["356", "0"], ["2", "1"], ["23", "2"], ["25", "3"], ["256", "4"], ["26", "5"], ["235", "6"], ["2356", "7"], ["236", "8"], ["35", "9"],
+  ["46", "."], ["346", "+"], ["36", "-"], ["16", "*"], ["34", "/"], ["12356", "("], ["23456", ")"],
+  ["12346", "&"], ["3456", "#"],
+  ["6", ","], ["56", ";"], ["156", ":"], ["2346", "!"], ["1456", "?"], ["5", "\""], ["3", "'"], ["4", "`"], ["45", "~"],
+  ["246", "{"], ["12456", "}"], ["123456", "="], ["126", "<"], ["345", ">"], ["1246", "$"], ["146", "%"], ["1256", "|"], ["456", "_"]
+];
+const NABCC_BY_BITS = {};
+NABCC_TABLE.forEach(([dots, ch]) => { NABCC_BY_BITS[dotsToBits(dots)] = ch; });
+
+function unicodeBrailleToAscii(s) {
+  return [...s].map(ch => {
+    const cp = ch.codePointAt(0);
+    if (cp >= 0x2800 && cp <= 0x283F) {
+      const ascii = NABCC_BY_BITS[cp - 0x2800];
+      return ascii !== undefined ? ascii : ch;
+    }
+    return ch;
+  }).join('');
+}
+
+// 真正轉換成功的 Unicode 點字結果（非錯誤/狀態文字）才能安全轉 ASCII；
+// 「尚未轉換」「輸入尚未完整」「PANIC/ERROR」這類訊息維持原樣顯示。
+let lastRawBraille = null;
+
+function renderBrailleOutput() {
+  const outEl = document.getElementById('l2n-out');
+  const format = document.getElementById('brl-format').value;
+  outEl.classList.toggle('font-ascii', format === 'ascii-simbraille');
+  if (lastRawBraille === null) return; // 目前顯示的是狀態/錯誤文字，不用重繪
+  outEl.textContent = (format === 'unicode') ? lastRawBraille : unicodeBrailleToAscii(lastRawBraille);
+}
+
+window.onFormatChange = function() { renderBrailleOutput(); };
+
+function showBrailleResult(unicodeStr) {
+  lastRawBraille = unicodeStr;
+  renderBrailleOutput();
+}
+
+function showPlainMessage(msg) {
+  lastRawBraille = null;
+  const outEl = document.getElementById('l2n-out');
+  outEl.classList.remove('font-ascii');
+  outEl.textContent = msg;
 }
 
 window.toggleMathml = function() {
@@ -149,7 +218,7 @@ async function runConvert() {
   if (tex.startsWith('$') && tex.endsWith('$') && tex.length >= 2) tex = tex.slice(1, -1);
   if (!tex) {
     if (seq !== convertSeq) return;
-    document.getElementById('l2n-out').textContent = '（尚未轉換）';
+    showPlainMessage('（尚未轉換）');
     document.getElementById('l2n-prev').innerHTML = '';
     document.getElementById('mathml-out').textContent = '';
     return;
@@ -172,7 +241,7 @@ async function runConvert() {
     // 見 https://github.com/daisy/MathCAT），所以在送進引擎前先擋掉，當成
     // 「輸入還沒完整」處理，不要真的呼叫 WASM。
     if (mathml.includes('<merror')) {
-      document.getElementById('l2n-out').textContent = '（輸入尚未完整）';
+      showPlainMessage('（輸入尚未完整）');
       setStatus('… 語法不完整，繼續輸入', '');
       return;
     }
@@ -181,18 +250,18 @@ async function runConvert() {
     if (seq !== convertSeq) return; // 這段期間又有更新的輸入了，結果作廢
 
     if (braille.startsWith('PANIC:') || braille.startsWith('ERROR:')) {
-      document.getElementById('l2n-out').textContent = braille;
+      showPlainMessage(braille);
       setStatus('✗ MathCAT 回報錯誤', 'err');
     } else if (!braille) {
-      document.getElementById('l2n-out').textContent = '（引擎回傳空字串，沒有錯誤訊息）';
+      showPlainMessage('（引擎回傳空字串，沒有錯誤訊息）');
       setStatus('⚠ 空結果', 'err');
     } else {
-      document.getElementById('l2n-out').textContent = braille;
+      showBrailleResult(braille);
       setStatus('✓ 轉換完成', 'ok');
     }
   } catch (e) {
     if (seq !== convertSeq) return; // 過期的錯誤，不要蓋掉新結果
-    document.getElementById('l2n-out').textContent = '轉換錯誤';
+    showPlainMessage('轉換錯誤');
     setStatus('✗ ' + e, 'err');
   }
 }
