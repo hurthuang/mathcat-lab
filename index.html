@@ -106,6 +106,7 @@ textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--focus-ring
 .box.mono{font-family:var(--mono);color:var(--green);white-space:pre-wrap;word-break:break-all;
   overflow-y:auto;resize:vertical;height:110px}
 .box.prev{overflow-y:auto;resize:vertical;height:120px}
+.box.prev:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(179,154,255,.45)}
 .box.small{font-family:var(--mono);font-size:.72rem;color:var(--dim);white-space:pre-wrap;
   overflow-y:auto;height:150px;resize:vertical}
 .acts{display:flex;gap:7px;flex-wrap:wrap}
@@ -146,8 +147,10 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
       <textarea id="l2n-in" placeholder="輸入 LaTeX，例如：\frac{1}{2}+\frac{1}{3}=\frac{5}{6}" oninput="onInputDebounced()">\frac{1}{2}+\frac{1}{3}=\frac{5}{6}</textarea>
     </div>
     <div class="pane">
-      <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽</div>
-      <div class="box prev" id="l2n-prev"></div>
+      <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽（點一下後可用方向鍵導覽）</div>
+      <div class="box prev" id="l2n-prev" tabindex="0"
+        aria-label="數學式預覽，方向鍵可導覽：下=放大進入、上=縮小出來、左右=上一個/下一個、Enter=唸目前位置、Esc=結束導覽"
+        onkeydown="onPreviewKeydown(event)"></div>
     </div>
   </div>
   <div class="pane">
@@ -310,6 +313,27 @@ window.exitNav = function() {
   document.getElementById('nav-toggle-btn').textContent = '🧭 導覽模式';
   lastRawBraille = fullBraille;
   renderBrailleOutput();
+};
+
+const NAV_KEY_MAP = {
+  ArrowDown: 'ZoomIn',
+  ArrowUp: 'ZoomOut',
+  ArrowLeft: 'MovePrevious',
+  ArrowRight: 'MoveNext',
+  Enter: 'ReadCurrent',
+  ' ': 'ReadCurrent',
+};
+
+window.onPreviewKeydown = function(ev) {
+  if (ev.key === 'Escape') {
+    if (navActive) { ev.preventDefault(); window.exitNav(); }
+    return;
+  }
+  const command = NAV_KEY_MAP[ev.key];
+  if (!command) return; // 其他鍵（Tab 等）不要攔截，正常瀏覽行為優先
+  ev.preventDefault();
+  if (!navActive) window.toggleNav(); // 比照 MathCAT demo：一按方向鍵就自動開始導覽
+  if (navActive) window.doNav(command);
 };
 
 window.doNav = function(command) {
