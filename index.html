@@ -6,11 +6,15 @@
 <title>MathCAT 實驗室（Nemeth 對照用）</title>
 <script>
 window.MathJax={
-  loader:{load:['input/tex','[mml]/mml3','a11y/assistive-mml']},
+  // 注意：這裡用的是 tex-mml-chtml.js combined bundle，全部元件已經包在同一個檔案裡，
+  // 不能再額外用 loader.load 手動指定要載入的元件——combined bundle 沒有對應的
+  // 個別檔案路徑可以動態抓，兩種載入方式混用會讓 loader.load 指定的東西悄悄失敗，
+  // 畫面不會報錯，但實際上沒生效（第一次修的時候就是踩到這個）。
   tex:{inlineMath:[['\\(','\\)']],displayMath:[['$$','$$']]},
   options:{
     skipHtmlTags:['script','noscript','style','textarea','pre'],
-    enableAssistiveMml:true // 幫視覺渲染多附一份隱藏的真正 <math>，NVDA/MathCAT 才讀得到
+    enableAssistiveMml:true, // 幫視覺渲染多附一份隱藏的真正 <math>，NVDA/MathCAT 才讀得到
+    menuOptions:{settings:{assistiveMml:true}}
   },
   startup:{typeset:false}
 };
