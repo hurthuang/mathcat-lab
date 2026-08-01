@@ -275,6 +275,7 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
     <button class="btn" id="copy-btn" onclick="copyOut()">複製</button>
     <button class="btn" onclick="toggleMathml()">切換 MathML</button>
     <button class="btn" id="speak-btn" onclick="speakWhole()">🔊 朗讀整個算式</button>
+    <select id="voice-select" title="朗讀語音"></select>
     <button class="btn" id="nav-toggle-btn" onclick="toggleNav()">🧭 導覽模式</button>
     <button class="me-open-btn" onclick="openMathEditor()">📝 數學編輯器</button>
   </div>
@@ -1401,8 +1402,54 @@ function speak(text) {
   if (!text || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-TW';
+  const voice = getSelectedVoice();
+  if (voice) {
+    u.voice = voice;
+    u.lang = voice.lang;
+  } else {
+    u.lang = 'zh-TW';
+  }
   window.speechSynthesis.speak(u);
+}
+
+function getSelectedVoice() {
+  const sel = document.getElementById('voice-select');
+  const uri = sel.value;
+  return availableVoices.find(v => v.voiceURI === uri) || null;
+}
+
+let availableVoices = [];
+const VOICE_PREF_KEY = 'mathcat-lab-voice';
+
+function populateVoiceList() {
+  availableVoices = window.speechSynthesis.getVoices();
+  if (!availableVoices.length) return;
+  const sel = document.getElementById('voice-select');
+  const savedUri = localStorage.getItem(VOICE_PREF_KEY);
+  sel.innerHTML = '';
+  // 中文語音排前面，其他語音當備用選項排後面（不是每台機器都有裝中文語音）。
+  const sorted = [...availableVoices].sort((a, b) => {
+    const aZh = a.lang.toLowerCase().startsWith('zh') ? 0 : 1;
+    const bZh = b.lang.toLowerCase().startsWith('zh') ? 0 : 1;
+    return aZh - bZh;
+  });
+  for (const v of sorted) {
+    const opt = document.createElement('option');
+    opt.value = v.voiceURI;
+    opt.textContent = `${v.name}（${v.lang}）`;
+    sel.appendChild(opt);
+  }
+  if (savedUri && sorted.some(v => v.voiceURI === savedUri)) {
+    sel.value = savedUri;
+  }
+  sel.onchange = () => localStorage.setItem(VOICE_PREF_KEY, sel.value);
+}
+
+if ('speechSynthesis' in window) {
+  populateVoiceList();
+  // 大多數瀏覽器語音清單是非同步載入的，第一次呼叫 getVoices() 常常是空的，
+  // 要等 voiceschanged 事件才拿得到真正的清單。
+  window.speechSynthesis.addEventListener('voiceschanged', populateVoiceList);
 }
 
 let ready = false;
