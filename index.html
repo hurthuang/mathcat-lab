@@ -165,8 +165,22 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
     <button class="btn pri" onclick="convert()">轉換</button>
     <button class="btn" id="copy-btn" onclick="copyOut()">複製</button>
     <button class="btn" onclick="toggleMathml()">切換 MathML</button>
+    <button class="btn" id="speak-btn" onclick="speakWhole()">🔊 朗讀整個算式</button>
+    <button class="btn" id="nav-toggle-btn" onclick="toggleNav()">🧭 導覽模式</button>
   </div>
   <div class="st" id="st"></div>
+  <div class="pane" id="nav-pane" style="display:none">
+    <div class="ph"><span class="dot p" aria-hidden="true"></span>導覽（用 MathCAT 逐步探索算式的各個部分，不需要外部螢幕報讀軟體）</div>
+    <div class="acts">
+      <button class="btn" onclick="doNav('ZoomIn')">⤵ 放大進入</button>
+      <button class="btn" onclick="doNav('ZoomOut')">⤴ 縮小出來</button>
+      <button class="btn" onclick="doNav('MovePrevious')">← 上一個</button>
+      <button class="btn" onclick="doNav('MoveNext')">→ 下一個</button>
+      <button class="btn" onclick="doNav('ReadCurrent')">🔊 唸目前位置</button>
+      <button class="btn" onclick="exitNav()">結束導覽</button>
+    </div>
+    <div class="box" id="nav-status" style="min-height:40px">（尚未開始導覽，按「放大進入」開始）</div>
+  </div>
   <div class="pane" id="mathml-pane" style="display:none">
     <div class="ph"><span class="dot" aria-hidden="true"></span>MathML（中介結果）</div>
     <div class="box small" id="mathml-out"></div>
@@ -174,7 +188,15 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
 </main>
 
 <script type="module">
-import init, { nemeth_from_mathml } from './mathcat-wasm/mathcat_nemeth.js';
+import init, { nemeth_from_mathml, spoken_text, navigate, nav_braille } from './mathcat-wasm/mathcat_nemeth.js';
+
+function speak(text) {
+  if (!text || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-TW';
+  window.speechSynthesis.speak(u);
+}
 
 let ready = false;
 init().then(() => { ready = true; setStatus('引擎就緒', 'ok'); convert(); })
@@ -221,6 +243,8 @@ function unicodeBrailleToAscii(s) {
 // 真正轉換成功的 Unicode 點字結果（非錯誤/狀態文字）才能安全轉 ASCII；
 // 「尚未轉換」「輸入尚未完整」「PANIC/ERROR」這類訊息維持原樣顯示。
 let lastRawBraille = null;
+// 整個算式（非導覽中間過程）的完整點字，導覽結束時要還原回這個。
+let fullBraille = null;
 
 function renderBrailleOutput() {
   const outEl = document.getElementById('l2n-out');
@@ -234,6 +258,7 @@ window.onFormatChange = function() { renderBrailleOutput(); };
 
 function showBrailleResult(unicodeStr) {
   lastRawBraille = unicodeStr;
+  fullBraille = unicodeStr;
   renderBrailleOutput();
 }
 
@@ -254,6 +279,56 @@ window.copyOut = function() {
   navigator.clipboard.writeText(text).then(() => setStatus('✓ 已複製', 'ok'));
 };
 
+window.speakWhole = function() {
+  if (!ready || fullBraille === null) { setStatus('請先成功轉換一次', 'err'); return; }
+  const text = spoken_text();
+  if (text.startsWith('PANIC:') || text.startsWith('ERROR:')) {
+    setStatus('✗ ' + text, 'err');
+    return;
+  }
+  speak(text);
+};
+
+let navActive = false;
+
+window.toggleNav = function() {
+  if (navActive) { window.exitNav(); return; }
+  if (!ready || fullBraille === null) { setStatus('請先成功轉換一次', 'err'); return; }
+  navActive = true;
+  document.getElementById('nav-pane').style.display = 'flex';
+  document.getElementById('nav-toggle-btn').textContent = '🧭 導覽中（再按一次結束）';
+  document.getElementById('nav-status').textContent = '（尚未開始導覽，按「放大進入」開始）';
+};
+
+window.exitNav = function() {
+  if (!navActive) return;
+  navActive = false;
+  // MathCAT 的中文導覽規則檔目前沒有 Exit 對應的規則，會回傳 ERROR，
+  // 這裡本來就不指望它成功——離開導覽這件事本身由前端自己的狀態控制。
+  navigate('Exit');
+  document.getElementById('nav-pane').style.display = 'none';
+  document.getElementById('nav-toggle-btn').textContent = '🧭 導覽模式';
+  lastRawBraille = fullBraille;
+  renderBrailleOutput();
+};
+
+window.doNav = function(command) {
+  if (!navActive) return;
+  const result = navigate(command);
+  const statusEl = document.getElementById('nav-status');
+  if (result.startsWith('PANIC:') || result.startsWith('ERROR:')) {
+    statusEl.textContent = '✗ ' + result;
+    return;
+  }
+  statusEl.textContent = result;
+  speak(result);
+  const brl = nav_braille();
+  if (!brl.startsWith('PANIC:') && !brl.startsWith('ERROR:')) {
+    lastRawBraille = brl;
+    renderBrailleOutput();
+  }
+};
+
 let convertSeq = 0;
 let debounceTimer = null;
 
@@ -271,6 +346,7 @@ window.onInputDebounced = function() {
 
 async function runConvert() {
   if (!ready) return;
+  if (navActive) window.exitNav(); // 換了新算式，之前的導覽位置不再有意義
   const seq = ++convertSeq;
   let tex = document.getElementById('l2n-in').value.trim();
   if (tex.startsWith('$') && tex.endsWith('$') && tex.length >= 2) tex = tex.slice(1, -1);

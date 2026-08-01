@@ -1,6 +1,43 @@
 /* @ts-self-types="./mathcat_nemeth.d.ts" */
 
 /**
+ * @returns {string}
+ */
+export function nav_braille() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.nav_braille();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
+ * command 是 MathCAT 的高階導覽指令字串，例如
+ * MoveNext / MovePrevious / ZoomIn / ZoomOut / ZoomOutAll / ReadCurrent / Exit
+ * @param {string} command
+ * @returns {string}
+ */
+export function navigate(command) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(command, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.navigate(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * @param {string} mathml
  * @returns {string}
  */
@@ -16,6 +53,22 @@ export function nemeth_from_mathml(mathml) {
         return getStringFromWasm0(ret[0], ret[1]);
     } finally {
         wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @returns {string}
+ */
+export function spoken_text() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.spoken_text();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
 }
 function __wbg_get_imports() {
