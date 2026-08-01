@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MathCAT 實驗室（Nemeth 對照用）</title>
+<script>
+window.MathJax={
+  loader:{load:['input/tex','[mml]/mml3']},
+  tex:{inlineMath:[['\\(','\\)']],displayMath:[['$$','$$']]},
+  options:{skipHtmlTags:['script','noscript','style','textarea','pre']},
+  startup:{typeset:false}
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+<style>
+:root{
+  --bg:#0b0d14;--surf:#13161f;--surf2:#1b1f2d;--bd:#262b3e;--bd2:#343b56;
+  --blue:#5a99ff;--purple:#b39aff;--green:#4ee3a8;--red:#ff8b8b;
+  --text:#eef2f9;--dim:#a9b3c9;
+  --mono:"Noto Sans Mono","Courier New",monospace;
+  --focus-ring:0 0 0 3px rgba(90,153,255,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC",sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column;font-size:14px;line-height:1.5}
+header{background:var(--surf);border-bottom:1px solid var(--bd);padding:9px 18px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-size:.95rem;font-weight:800;color:var(--blue);letter-spacing:.04em}
+.logo span{color:var(--purple)}
+.badge{padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:700;
+  letter-spacing:.06em;background:rgba(255,139,139,.15);border:1px solid var(--red);color:var(--red)}
+main{flex:1;padding:13px 18px;display:flex;flex-direction:column;gap:9px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.pane{display:flex;flex-direction:column;gap:5px}
+.ph{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);display:flex;align-items:center;gap:5px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--blue)}
+.dot.g{background:var(--green)}.dot.p{background:var(--purple)}
+textarea{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:7px;
+  color:var(--text);font-family:var(--mono);font-size:15px;padding:10px;
+  resize:vertical;height:120px;min-height:80px;transition:border-color .15s;line-height:1.65}
+textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--focus-ring)}
+.box{background:var(--surf);border:1px solid var(--bd);border-radius:7px;
+  padding:10px;min-height:80px;font-size:15px;line-height:1.65}
+.box.mono{font-family:var(--mono);color:var(--green);white-space:pre-wrap;word-break:break-all;
+  overflow-y:auto;resize:vertical;height:110px}
+.box.prev{overflow-y:auto;resize:vertical;height:120px}
+.box.small{font-family:var(--mono);font-size:.72rem;color:var(--dim);white-space:pre-wrap;
+  overflow-y:auto;height:150px;resize:vertical}
+.acts{display:flex;gap:7px;flex-wrap:wrap}
+.btn{padding:6px 13px;border-radius:5px;border:1px solid var(--bd2);
+  background:var(--surf2);color:var(--text);font-size:.76rem;font-weight:600;
+  cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.pri:hover{background:#3d7ee0}
+.st{font-size:.71rem;color:var(--dim);min-height:18px;padding:2px 0}
+.st.ok{color:var(--green)}.st.err{color:var(--red)}
+.info{font-size:.71rem;color:var(--dim);padding:5px 8px;background:var(--surf2);
+  border-left:3px solid var(--red);border-radius:0 5px 5px 0}
+.info a{color:var(--blue)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-label="MathCAT 實驗室">MathCAT <span>實驗室</span></div>
+  <span class="badge">實驗性・僅供對照・非官方功能</span>
+</header>
+
+<main>
+  <div class="info">
+    這不是正式工具，只做單一算式的 LaTeX → Nemeth 單向轉換，用來跟
+    <a href="https://hurthuang.github.io/vi-tools/nemeth_converter.html" target="_blank" rel="noopener">π 數學點字（nc，vi-tools）</a>的輸出互相對照、驗證。
+    引擎是 <a href="https://github.com/daisy/MathCAT" target="_blank" rel="noopener">MathCAT</a>
+    （JAWS／NVDA 2026.1+ 內建的同一套引擎），跟 nc 是完全獨立的兩套實作，
+    兩邊算出來不一樣不代表任何一邊一定錯，需要對照官方 Nemeth 規則書判斷。
+    不支援文字與算式混排，也不會持續跟進 MathCAT 上游更新。
+  </div>
+  <div class="grid">
+    <div class="pane">
+      <div class="ph"><span class="dot" aria-hidden="true"></span>LaTeX 輸入</div>
+      <textarea id="l2n-in" placeholder="輸入 LaTeX，例如：\frac{1}{2}+\frac{1}{3}=\frac{5}{6}" oninput="onInputDebounced()">\frac{1}{2}+\frac{1}{3}=\frac{5}{6}</textarea>
+    </div>
+    <div class="pane">
+      <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽</div>
+      <div class="box prev" id="l2n-prev"></div>
+    </div>
+  </div>
+  <div class="pane">
+    <div class="ph"><span class="dot g" aria-hidden="true"></span>Nemeth 輸出（MathCAT）</div>
+    <div class="box mono" id="l2n-out">（尚未轉換）</div>
+  </div>
+  <div class="acts">
+    <button class="btn pri" onclick="convert()">轉換</button>
+    <button class="btn" id="copy-btn" onclick="copyOut()">複製</button>
+    <button class="btn" onclick="toggleMathml()">切換 MathML</button>
+  </div>
+  <div class="st" id="st"></div>
+  <div class="pane" id="mathml-pane" style="display:none">
+    <div class="ph"><span class="dot" aria-hidden="true"></span>MathML（中介結果）</div>
+    <div class="box small" id="mathml-out"></div>
+  </div>
+</main>
+
+<script type="module">
+import init, { nemeth_from_mathml } from './mathcat-wasm/mathcat_nemeth.js';
+
+let ready = false;
+init().then(() => { ready = true; setStatus('引擎就緒', 'ok'); convert(); })
+  .catch(e => setStatus('✗ 引擎載入失敗：' + e, 'err'));
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('st');
+  el.textContent = msg;
+  el.className = 'st' + (cls ? ' ' + cls : '');
+}
+
+window.toggleMathml = function() {
+  const p = document.getElementById('mathml-pane');
+  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+};
+
+window.copyOut = function() {
+  const text = document.getElementById('l2n-out').textContent;
+  navigator.clipboard.writeText(text).then(() => setStatus('✓ 已複製', 'ok'));
+};
+
+let convertSeq = 0;
+let debounceTimer = null;
+
+window.convert = function() {
+  // 按鈕點擊：立即跑，不等 debounce
+  clearTimeout(debounceTimer);
+  runConvert();
+};
+
+window.onInputDebounced = function() {
+  // 打字中：停頓 350ms 才真的轉換，避免每個字元都觸發一次非同步流程互相競速
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(runConvert, 350);
+};
+
+async function runConvert() {
+  if (!ready) return;
+  const seq = ++convertSeq;
+  let tex = document.getElementById('l2n-in').value.trim();
+  if (tex.startsWith('$') && tex.endsWith('$') && tex.length >= 2) tex = tex.slice(1, -1);
+  if (!tex) {
+    if (seq !== convertSeq) return;
+    document.getElementById('l2n-out').textContent = '（尚未轉換）';
+    document.getElementById('l2n-prev').innerHTML = '';
+    document.getElementById('mathml-out').textContent = '';
+    return;
+  }
+  try {
+    await MathJax.startup.promise;
+    const mathml = await MathJax.tex2mmlPromise(tex, { display: true });
+    if (seq !== convertSeq) return; // 過期的轉換結果，使用者已經又輸入新內容
+
+    document.getElementById('mathml-out').textContent = mathml;
+
+    const prevEl = document.getElementById('l2n-prev');
+    MathJax.typesetClear([prevEl]);
+    prevEl.innerHTML = mathml;
+    await MathJax.typesetPromise([prevEl]);
+
+    // MathJax 對還沒打完的不合法 LaTeX 常常不會整個 reject，而是把解析不出來的
+    // 片段包成 <merror> 照樣回傳一份「看起來正常」的 MathML。這種 MathML 丟給
+    // MathCAT 會直接讓 wasm 崩潰（已確認是 MathCAT 本身沒處理 merror 節點的 bug，
+    // 見 https://github.com/daisy/MathCAT），所以在送進引擎前先擋掉，當成
+    // 「輸入還沒完整」處理，不要真的呼叫 WASM。
+    if (mathml.includes('<merror')) {
+      document.getElementById('l2n-out').textContent = '（輸入尚未完整）';
+      setStatus('… 語法不完整，繼續輸入', '');
+      return;
+    }
+
+    const braille = nemeth_from_mathml(mathml);
+    if (seq !== convertSeq) return; // 這段期間又有更新的輸入了，結果作廢
+
+    if (braille.startsWith('PANIC:') || braille.startsWith('ERROR:')) {
+      document.getElementById('l2n-out').textContent = braille;
+      setStatus('✗ MathCAT 回報錯誤', 'err');
+    } else if (!braille) {
+      document.getElementById('l2n-out').textContent = '（引擎回傳空字串，沒有錯誤訊息）';
+      setStatus('⚠ 空結果', 'err');
+    } else {
+      document.getElementById('l2n-out').textContent = braille;
+      setStatus('✓ 轉換完成', 'ok');
+    }
+  } catch (e) {
+    if (seq !== convertSeq) return; // 過期的錯誤，不要蓋掉新結果
+    document.getElementById('l2n-out').textContent = '轉換錯誤';
+    setStatus('✗ ' + e, 'err');
+  }
+}
+</script>
+</body>
+</html>
