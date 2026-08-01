@@ -28,6 +28,18 @@ CSS、JS 全部照搬，只改了「套用到轉換器」按鈕呼叫的函式�
 [108 數學課綱與 LaTeX 語法](https://class.kh.edu.tw/19061/bulletin/msg_view/620)。授權狀態不明確，
 沿用 nc 已經在用的現況。
 
+## 功能
+
+- LaTeX → Nemeth 點字，Unicode／ASCII／ASCII+SimBraille 字型三種顯示格式可切換。
+- 🔊 朗讀整個算式、🧭 導覽模式（MathCAT `navigate` 高階指令：ZoomIn/ZoomOut/MovePrevious/
+  MoveNext/ReadCurrent，逐步探索算式的各個部分，每一步同步更新點字跟報讀文字），
+  語音角色可選（`speechSynthesis.getVoices()`）。
+- 📝 數學編輯器（照搬自 nc，見下方說明）。
+- ☀ 高對比白底黑字主題切換（demo／投影用）。
+- 版面：左欄輸入與操作控制、右欄視覺呈現／點字／報讀文字三格堆疊（2:3 比例），
+  設計目的是拿來對外示範「NVDA 報讀數學」的實際狀態——真的用 NVDA 操作時，
+  螢幕上同時看不到算式、點字、報讀文字三者，這個頁面刻意把三者並列方便展示。
+
 ## 檔案結構
 
 ```
@@ -54,6 +66,14 @@ mathcat-wasm/
   的 zip 解壓縮 feature flag 沒開全，會編譯失敗），必須改用 GitHub 原始碼（見下方建置方式）
   才能編譯成功——這也是 MathCAT 官方 demo（[MathCATDemo](https://github.com/daisy/MathCATDemo)）
   自己 `Cargo.toml` 採用的方式，不是我們自己發明的繞路。
+- **多行空間排列（聯立方程式/矩陣/行列式）MathCAT 目前輸出不出正確點字**，包括未經修改的
+  MathCAT 官方 demo 本身也測不出來——這點觀察是在跟 nc 對比時發現的：nc 對這幾種（Nemeth
+  Rule 19 enlarged bracket 分組符號）都能正確輸出多行點字（每行各自帶正確的放大括號記號，
+  真的是換行，不是擠成一行），逐條驗證過 `\begin{cases}`、`\begin{matrix}`、`\begin{vmatrix}`
+  都對。方向反過來了：不是「兩邊都做不到的共同限制」，是 nc 這塊做得到、MathCAT（含官方版本）
+  目前做不到。沒有回報上游，只在這裡記錄。**注意跟另一個常見混淆點區分**：Nemeth Rule 25
+  （長除法、直式加減這類需要欄位對齊的空間排版算術題）才是 nc 自己也明確沒實作的範圍，
+  跟這裡講的 Rule 19 分組符號多行輸出是不同規則、不同範圍，不要混在一起講。
 
 ## 建置方式（如何重新編譯 wasm）
 
@@ -67,7 +87,7 @@ WASM（直接下載別人編譯好的檔案）維護方式不同，是這個 rep
   `winget install Microsoft.VisualStudio.2022.BuildTools`（勾 C++ 工作負載）
 - `wasm-pack`（`cargo install wasm-pack`）
 
-建一個暫存 Rust 專案，`Cargo.toml`：
+建一個暫存 Rust 專案（或直接用本 repo 的 [`rust-src/`](rust-src/) 資料夾），`Cargo.toml`：
 
 ```toml
 [package]
@@ -89,7 +109,8 @@ features = ["include-zip"]
 opt-level = "z"
 ```
 
-`src/lib.rs`：
+`src/lib.rs`（完整版本，含 `nemeth_from_mathml`／`spoken_text`／`navigate`／`nav_braille`
+四個 wasm-bindgen 匯出函式，也存了一份在本 repo 的 [`rust-src/lib.rs`](rust-src/lib.rs) 備查）：
 
 ```rust
 use wasm_bindgen::prelude::*;
@@ -99,10 +120,19 @@ use std::sync::Once;
 
 static INIT: Once = Once::new();
 
+fn ensure_init() {
+    INIT.call_once(|| { init_panic_handler(); });
+}
+
+fn panic_msg(payload: Box<dyn std::any::Any + Send>) -> String {
+    payload.downcast_ref::<&str>().map(|s| s.to_string())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "unknown panic payload".to_string())
+}
+
 #[wasm_bindgen]
 pub fn nemeth_from_mathml(mathml: &str) -> String {
-    INIT.call_once(|| { init_panic_handler(); });
-
+    ensure_init();
     let mathml = mathml.to_string();
     let result = catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
         set_rules_dir("Rules".to_string()).map_err(|e| format!("set_rules_dir error: {:?}", e))?;
@@ -110,19 +140,57 @@ pub fn nemeth_from_mathml(mathml: &str) -> String {
             .map_err(|e| format!("set_preference CheckRuleFiles error: {:?}", e))?;
         set_preference("BrailleCode".to_string(), "Nemeth".to_string())
             .map_err(|e| format!("set_preference BrailleCode error: {:?}", e))?;
+        set_preference("Language".to_string(), "zh".to_string())
+            .map_err(|e| format!("set_preference Language error: {:?}", e))?;
         set_mathml(mathml).map_err(|e| format!("set_mathml error: {:?}", e))?;
         get_braille("".to_string()).map_err(|e| format!("get_braille error: {:?}", e))
     }));
-
     match result {
         Ok(Ok(s)) => s,
         Ok(Err(e)) => format!("ERROR: {}", e),
-        Err(payload) => {
-            let msg = payload.downcast_ref::<&str>().map(|s| s.to_string())
-                .or_else(|| payload.downcast_ref::<String>().cloned())
-                .unwrap_or_else(|| "unknown panic payload".to_string());
-            format!("PANIC: {}", msg)
-        }
+        Err(payload) => format!("PANIC: {}", panic_msg(payload)),
+    }
+}
+
+#[wasm_bindgen]
+pub fn spoken_text() -> String {
+    ensure_init();
+    let result = catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+        get_spoken_text().map_err(|e| format!("get_spoken_text error: {:?}", e))
+    }));
+    match result {
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => format!("ERROR: {}", e),
+        Err(payload) => format!("PANIC: {}", panic_msg(payload)),
+    }
+}
+
+/// command 是 MathCAT 的高階導覽指令字串，例如
+/// MoveNext / MovePrevious / ZoomIn / ZoomOut / ZoomOutAll / ReadCurrent / Exit
+#[wasm_bindgen]
+pub fn navigate(command: &str) -> String {
+    ensure_init();
+    let command = command.to_string();
+    let result = catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+        do_navigate_command(command).map_err(|e| format!("do_navigate_command error: {:?}", e))
+    }));
+    match result {
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => format!("ERROR: {}", e),
+        Err(payload) => format!("PANIC: {}", panic_msg(payload)),
+    }
+}
+
+#[wasm_bindgen]
+pub fn nav_braille() -> String {
+    ensure_init();
+    let result = catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+        get_navigation_braille().map_err(|e| format!("get_navigation_braille error: {:?}", e))
+    }));
+    match result {
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => format!("ERROR: {}", e),
+        Err(payload) => format!("PANIC: {}", panic_msg(payload)),
     }
 }
 ```
@@ -137,6 +205,27 @@ wasm-pack build --target web --out-name mathcat_nemeth --out-dir pkg
 
 `catch_unwind` 能攔到一般的 Rust panic（例如某些不支援的 MathML 結構），但攔不到上面提到的
 `<merror>` 崩潰——那個是更底層的 trap，前端頁面自己的 `<merror>` 偵測才是真正有效的防護。
+
+## MathJax 無障礙設定的坑（寫給以後的自己）
+
+`index.html` 的 `window.MathJax` 設定踩過幾個坑，都是實測才發現、文件沒講清楚：
+
+1. **combined bundle（`tex-mml-chtml.js`）不能跟 `loader.load` 混用**——combined bundle
+   已經整包載好了，額外指定 `loader.load` 會讓瀏覽器嘗試動態抓不存在的檔案路徑，
+   悄悄失敗、畫面不會報錯，但指定的元件實際上沒生效。
+2. **`enableAssistiveMml` 在目前 CDN 版本已經不是合法選項**，主控台會噴
+   `Invalid option "enableAssistiveMml" (no default value)`；真正有效的是
+   `options.menuOptions.settings.assistiveMml`。
+3. **combined bundle 預設會自己開一整套 Explorer/選單/語音**，會把單一 `<math>` 物件拆成
+   一堆個別可探索的小物件、蓋掉 NVDA 自己的 MathCAT 報讀。要完全比照 MathCAT 官方 demo
+   （[MathCATDemo](https://github.com/daisy/MathCATDemo)）的作法整組關掉
+   （`enableMenu/enableEnrichment/enableSpeech/enableBraille/enableExplorer/enableComplexity`
+   全部 false + `renderActions` 清空，而且要在 `startup.ready()` 裡再清一次，因為 combined
+   component 是在 config 套用「之後」才載入這些擴充、會把 renderActions 蓋回去）。
+4. **`role="application"` 能讓方向鍵確實傳給網頁**（不會被 NVDA 瀏覽模式攔截），但會讓
+   NVDA 那個區域整個進入應用程式模式，蓋掉第 3 點辛苦換來的「整句自動唸出來」效果——
+   兩個效果衝突、只能二選一，目前做法是動態切換：平常拿掉這個屬性，按「🧭 導覽模式」
+   進入導覽時才加上去，離開導覽時拿掉。
 
 ## 授權
 

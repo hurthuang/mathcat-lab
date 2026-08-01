@@ -1,0 +1,17 @@
+[package]
+name = "mathcat-nemeth"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+[dependencies.mathcat]
+git = "https://github.com/daisy/MathCAT"
+features = ["include-zip"]
+
+[profile.release]
+opt-level = "z"
