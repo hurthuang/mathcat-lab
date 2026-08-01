@@ -6,9 +6,12 @@
 <title>MathCAT 實驗室（Nemeth 對照用）</title>
 <script>
 window.MathJax={
-  loader:{load:['input/tex','[mml]/mml3']},
+  loader:{load:['input/tex','[mml]/mml3','a11y/assistive-mml']},
   tex:{inlineMath:[['\\(','\\)']],displayMath:[['$$','$$']]},
-  options:{skipHtmlTags:['script','noscript','style','textarea','pre']},
+  options:{
+    skipHtmlTags:['script','noscript','style','textarea','pre'],
+    enableAssistiveMml:true // 幫視覺渲染多附一份隱藏的真正 <math>，NVDA/MathCAT 才讀得到
+  },
   startup:{typeset:false}
 };
 </script>
