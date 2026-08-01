@@ -79,6 +79,14 @@ window.MathJax={
   --mono:"Noto Sans Mono","Courier New",monospace;
   --focus-ring:0 0 0 3px rgba(90,153,255,.55);
 }
+/* 高對比白底黑字主題，demo 用（投影/共享螢幕時比深色主題容易看清楚）。
+   數值沿用 vi-tools nemeth_converter.html 既有的 light theme（WCAG AA）。 */
+html[data-theme="light"]{
+  --bg:#ffffff;--surf:#f6f7fb;--surf2:#eef1f8;--bd:#c9cfdd;--bd2:#9aa5bc;
+  --blue:#1557d6;--purple:#6b3dd6;--green:#0a7a4a;--red:#c0392b;
+  --text:#101320;--dim:#4a526b;
+  --focus-ring:0 0 0 3px rgba(21,87,214,.4);
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Noto Sans TC",sans-serif;background:var(--bg);color:var(--text);
   min-height:100vh;display:flex;flex-direction:column;font-size:14px;line-height:1.5}
@@ -89,8 +97,16 @@ header{background:var(--surf);border-bottom:1px solid var(--bd);padding:9px 18px
 .badge{padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:700;
   letter-spacing:.06em;background:rgba(255,139,139,.15);border:1px solid var(--red);color:var(--red)}
 main{flex:1;padding:13px 18px;display:flex;flex-direction:column;gap:9px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-@media(max-width:640px){.grid{grid-template-columns:1fr}}
+/* Demo 版面：左欄輸入/控制（主講人操作），右欄三格堆疊
+   （視覺呈現／點字／報讀文字，給觀眾看），右欄寬度是版面的大部分，
+   每格都有足夠寬度顯示較長的算式或點字，不用切成三分之一那麼窄。 */
+.demo-layout{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.demo-layout{grid-template-columns:1fr}}
+.demo-right{display:flex;flex-direction:column;gap:12px}
+.demo-box{font-size:1.25rem;line-height:1.7}
+#l2n-out.demo-box{font-size:1.5rem}
+#l2n-prev.demo-box{min-height:70px}
+#speech-text.demo-box{min-height:70px}
 .pane{display:flex;flex-direction:column;gap:5px}
 .ph{font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
   color:var(--dim);display:flex;align-items:center;gap:5px}
@@ -237,6 +253,7 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
 <header>
   <div class="logo" aria-label="MathCAT 實驗室">MathCAT <span>實驗室</span></div>
   <span class="badge">實驗性・僅供對照・非官方功能</span>
+  <button class="btn" id="theme-toggle-btn" onclick="toggleTheme()" style="margin-left:auto">☀ 高對比主題</button>
 </header>
 
 <main>
@@ -248,53 +265,63 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
     兩邊算出來不一樣不代表任何一邊一定錯，需要對照官方 Nemeth 規則書判斷。
     不支援文字與算式混排，也不會持續跟進 MathCAT 上游更新。
   </div>
-  <div class="grid">
-    <div class="pane">
+  <div class="demo-layout">
+    <div class="pane demo-left">
       <div class="ph"><span class="dot" aria-hidden="true"></span>LaTeX 輸入</div>
       <textarea id="l2n-in" placeholder="輸入 LaTeX，例如：\frac{1}{2}+\frac{1}{3}=\frac{5}{6}" oninput="onInputDebounced()">\frac{1}{2}+\frac{1}{3}=\frac{5}{6}</textarea>
+      <div class="acts">
+        <button class="btn pri" onclick="convert()">轉換</button>
+        <button class="me-open-btn" onclick="openMathEditor()">📝 數學編輯器</button>
+      </div>
+      <div class="acts">
+        <button class="btn" id="speak-btn" onclick="speakWhole()">🔊 朗讀整個算式</button>
+        <select id="voice-select" title="朗讀語音"></select>
+      </div>
+      <div class="acts">
+        <button class="btn" id="nav-toggle-btn" onclick="toggleNav()">🧭 導覽模式</button>
+        <button class="btn" id="copy-btn" onclick="copyOut()">複製點字</button>
+        <button class="btn" onclick="toggleMathml()">切換 MathML</button>
+      </div>
+      <div class="st" id="st"></div>
+      <div class="pane" id="nav-pane" style="display:none">
+        <div class="ph"><span class="dot p" aria-hidden="true"></span>導覽操作（結果顯示在右邊「報讀文字」「點字」兩格）</div>
+        <div class="acts">
+          <button class="btn" onclick="doNav('ZoomIn')">⤵ 放大進入</button>
+          <button class="btn" onclick="doNav('ZoomOut')">⤴ 縮小出來</button>
+          <button class="btn" onclick="doNav('MovePrevious')">← 上一個</button>
+          <button class="btn" onclick="doNav('MoveNext')">→ 下一個</button>
+          <button class="btn" onclick="doNav('ReadCurrent')">🔊 唸目前位置</button>
+          <button class="btn" onclick="exitNav()">結束導覽</button>
+        </div>
+      </div>
+      <div class="pane" id="mathml-pane" style="display:none">
+        <div class="ph"><span class="dot" aria-hidden="true"></span>MathML（中介結果）</div>
+        <div class="box small" id="mathml-out"></div>
+      </div>
     </div>
-    <div class="pane">
-      <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽（按「🧭 導覽模式」後可用方向鍵逐步導覽）</div>
-      <div class="box prev" id="l2n-prev" tabindex="0"
-        aria-label="數學式預覽，方向鍵可導覽：下=放大進入、上=縮小出來、左右=上一個/下一個、Enter=唸目前位置、Esc=結束導覽"></div>
+
+    <div class="demo-right">
+      <div class="pane">
+        <div class="ph">視覺呈現</div>
+        <div class="box prev demo-box" id="l2n-prev" tabindex="0"
+          aria-label="數學式預覽，按「🧭 導覽模式」後可用方向鍵導覽：下=放大進入、上=縮小出來、左右=上一個/下一個、Enter=唸目前位置、Esc=結束導覽"></div>
+      </div>
+      <div class="pane">
+        <div class="ph">
+          點字（Nemeth，MathCAT）
+          <select id="brl-format" title="點字顯示格式" style="margin-left:auto" onchange="onFormatChange()">
+            <option value="unicode">Unicode 點字</option>
+            <option value="ascii">ASCII</option>
+            <option value="ascii-simbraille">ASCII + SimBraille 字型</option>
+          </select>
+        </div>
+        <div class="box mono demo-box" id="l2n-out">（尚未轉換）</div>
+      </div>
+      <div class="pane">
+        <div class="ph">報讀文字（MathCAT 語音內容）</div>
+        <div class="box demo-box" id="speech-text">（尚未朗讀）</div>
+      </div>
     </div>
-  </div>
-  <div class="pane">
-    <div class="ph">
-      <span class="dot g" aria-hidden="true"></span>Nemeth 輸出（MathCAT）
-      <select id="brl-format" title="點字顯示格式" style="margin-left:auto" onchange="onFormatChange()">
-        <option value="unicode">Unicode 點字</option>
-        <option value="ascii">ASCII</option>
-        <option value="ascii-simbraille">ASCII + SimBraille 字型</option>
-      </select>
-    </div>
-    <div class="box mono" id="l2n-out">（尚未轉換）</div>
-  </div>
-  <div class="acts">
-    <button class="btn pri" onclick="convert()">轉換</button>
-    <button class="btn" id="copy-btn" onclick="copyOut()">複製</button>
-    <button class="btn" onclick="toggleMathml()">切換 MathML</button>
-    <button class="btn" id="speak-btn" onclick="speakWhole()">🔊 朗讀整個算式</button>
-    <select id="voice-select" title="朗讀語音"></select>
-    <button class="btn" id="nav-toggle-btn" onclick="toggleNav()">🧭 導覽模式</button>
-    <button class="me-open-btn" onclick="openMathEditor()">📝 數學編輯器</button>
-  </div>
-  <div class="st" id="st"></div>
-  <div class="pane" id="nav-pane" style="display:none">
-    <div class="ph"><span class="dot p" aria-hidden="true"></span>導覽（用 MathCAT 逐步探索算式的各個部分，不需要外部螢幕報讀軟體）</div>
-    <div class="acts">
-      <button class="btn" onclick="doNav('ZoomIn')">⤵ 放大進入</button>
-      <button class="btn" onclick="doNav('ZoomOut')">⤴ 縮小出來</button>
-      <button class="btn" onclick="doNav('MovePrevious')">← 上一個</button>
-      <button class="btn" onclick="doNav('MoveNext')">→ 下一個</button>
-      <button class="btn" onclick="doNav('ReadCurrent')">🔊 唸目前位置</button>
-      <button class="btn" onclick="exitNav()">結束導覽</button>
-    </div>
-    <div class="box" id="nav-status" style="min-height:40px">（尚未開始導覽，按「放大進入」開始）</div>
-  </div>
-  <div class="pane" id="mathml-pane" style="display:none">
-    <div class="ph"><span class="dot" aria-hidden="true"></span>MathML（中介結果）</div>
-    <div class="box small" id="mathml-out"></div>
   </div>
 </main>
 <!-- Math Editor Modal -->
@@ -1398,7 +1425,27 @@ if (_spb) _spb.addEventListener('click', savePreviewAsHTML);
 <script type="module">
 import init, { nemeth_from_mathml, spoken_text, navigate, nav_braille } from './mathcat-wasm/mathcat_nemeth.js';
 
+const THEME_KEY = 'mathcat-lab-theme';
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('theme-toggle-btn').textContent = '🌙 深色主題';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('theme-toggle-btn').textContent = '☀ 高對比主題';
+  }
+}
+window.toggleTheme = function() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const next = isLight ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+};
+applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
 function speak(text) {
+  const transcriptEl = document.getElementById('speech-text');
+  if (transcriptEl) transcriptEl.textContent = text || '（無內容）';
   if (!text || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
@@ -1560,7 +1607,7 @@ window.toggleNav = function() {
   navActive = true;
   document.getElementById('nav-pane').style.display = 'flex';
   document.getElementById('nav-toggle-btn').textContent = '🧭 導覽中（再按一次結束）';
-  document.getElementById('nav-status').textContent = '（尚未開始導覽，按「放大進入」開始）';
+  document.getElementById('speech-text').textContent = '（導覽模式已開啟，按左邊的按鈕開始逐步探索）';
   // role="application" 只在導覽期間加上去，讓方向鍵能被網頁接住；平常拿掉，
   // 讓 NVDA 用它自己的瀏覽模式接手（Tab 進去就能透過 assistive-mml 整句
   // 自動唸出來）。兩個效果會互相衝突，只能二選一，用導覽開關切換。
@@ -1604,13 +1651,11 @@ window.onPreviewKeydown = function(ev) {
 window.doNav = function(command) {
   if (!navActive) return;
   const result = navigate(command);
-  const statusEl = document.getElementById('nav-status');
   if (result.startsWith('PANIC:') || result.startsWith('ERROR:')) {
-    statusEl.textContent = '✗ ' + result;
+    setStatus('✗ ' + result, 'err');
     return;
   }
-  statusEl.textContent = result;
-  speak(result);
+  speak(result); // speak() 內部也會把文字寫進「報讀文字」那格
   const brl = nav_braille();
   if (!brl.startsWith('PANIC:') && !brl.startsWith('ERROR:')) {
     lastRawBraille = brl;
