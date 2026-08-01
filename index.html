@@ -13,10 +13,61 @@ window.MathJax={
   tex:{inlineMath:[['\\(','\\)']],displayMath:[['$$','$$']]},
   options:{
     skipHtmlTags:['script','noscript','style','textarea','pre'],
-    enableAssistiveMml:true, // 幫視覺渲染多附一份隱藏的真正 <math>，NVDA/MathCAT 才讀得到
-    menuOptions:{settings:{assistiveMml:true}}
+    // combined bundle 預設會自己開一整套跟 NVDA/MathCAT 互相搶戲的無障礙機制：
+    // 自己的 Explorer（把算式拆成一堆個別可探索的小物件，每個數字/符號各自變成
+    // 一個物件）、自己的語音引擎（SRE，預設英文）、自己的選單。這些不關掉，
+    // NVDA 抓到的就不是一個乾淨的單一 <math> 物件交給 MathCAT 處理，而是被
+    // MathJax 自己的 Explorer 接管、拆成一堆英文碎片——這是第二次修的時候
+    // 實測到的真正原因，光加 assistiveMml 不夠，這些也要一起關掉。
+    // 照抄 MathCAT 官方 demo（daisy/MathCATDemo）的設定。
+    enableMenu:false,
+    enableAssistiveMml:true,
+    enableEnrichment:false,
+    enableSpeech:false,
+    enableBraille:false,
+    enableExplorer:false,
+    enableComplexity:false,
+    menuOptions:{
+      settings:{
+        showSRE:false,
+        enrich:false,
+        speech:false,
+        braille:false,
+        collapsible:false,
+        assistiveMml:true
+      }
+    },
+    renderActions:{
+      enrich:[],
+      attachSpeech:[],
+      complexity:[],
+      explorable:[],
+      addMenu:[],
+      getMenu:[],
+      checkLoading:[]
+    },
+    a11y:{
+      speech:false,
+      braille:false,
+      voicing:false,
+      subtitles:false,
+      viewBraille:false,
+      help:false
+    }
   },
-  startup:{typeset:false}
+  startup:{
+    typeset:false,
+    ready(){
+      MathJax.startup.defaultReady();
+      // combined component 是在 config 套用「之後」才載入這些 a11y 擴充，
+      // 載入時會重新註冊 renderActions，把上面 options.renderActions 清空的
+      // 設定蓋回去——這裡要在 ready() 裡再清一次才會真的關掉。
+      var disabled=['enrich','attachSpeech','complexity','explorable','addMenu','getMenu','checkLoading'];
+      for(var i=0;i<disabled.length;i++){
+        MathJax.startup.document.renderActions[disabled[i]]=[];
+      }
+    }
+  }
 };
 </script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
