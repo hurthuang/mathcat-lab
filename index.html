@@ -254,8 +254,8 @@ select{background:var(--surf2);color:var(--text);border:1px solid var(--bd2);bor
       <textarea id="l2n-in" placeholder="輸入 LaTeX，例如：\frac{1}{2}+\frac{1}{3}=\frac{5}{6}" oninput="onInputDebounced()">\frac{1}{2}+\frac{1}{3}=\frac{5}{6}</textarea>
     </div>
     <div class="pane">
-      <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽（點一下後可用方向鍵導覽）</div>
-      <div class="box prev" id="l2n-prev" tabindex="0" role="application"
+      <div class="ph"><span class="dot p" aria-hidden="true"></span>MathJax 預覽（按「🧭 導覽模式」後可用方向鍵逐步導覽）</div>
+      <div class="box prev" id="l2n-prev" tabindex="0"
         aria-label="數學式預覽，方向鍵可導覽：下=放大進入、上=縮小出來、左右=上一個/下一個、Enter=唸目前位置、Esc=結束導覽"></div>
     </div>
   </div>
@@ -1561,6 +1561,10 @@ window.toggleNav = function() {
   document.getElementById('nav-pane').style.display = 'flex';
   document.getElementById('nav-toggle-btn').textContent = '🧭 導覽中（再按一次結束）';
   document.getElementById('nav-status').textContent = '（尚未開始導覽，按「放大進入」開始）';
+  // role="application" 只在導覽期間加上去，讓方向鍵能被網頁接住；平常拿掉，
+  // 讓 NVDA 用它自己的瀏覽模式接手（Tab 進去就能透過 assistive-mml 整句
+  // 自動唸出來）。兩個效果會互相衝突，只能二選一，用導覽開關切換。
+  document.getElementById('l2n-prev').setAttribute('role', 'application');
 };
 
 window.exitNav = function() {
@@ -1571,6 +1575,7 @@ window.exitNav = function() {
   navigate('Exit');
   document.getElementById('nav-pane').style.display = 'none';
   document.getElementById('nav-toggle-btn').textContent = '🧭 導覽模式';
+  document.getElementById('l2n-prev').removeAttribute('role');
   lastRawBraille = fullBraille;
   renderBrailleOutput();
 };
